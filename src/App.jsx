@@ -1,93 +1,69 @@
-import { useState, useEffect } from 'react'
-import { supabase } from './supabaseClient'
+import { useState } from 'react'
+import LoginScreen from './components/LoginScreen'
+import PinScreen from './components/PinScreen'
 
-function App() {
-  const [employees, setEmployees] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+export default function App() {
+  const [currentUser, setCurrentUser] = useState(null)
+  const [pendingUser, setPendingUser] = useState(null)
 
-  useEffect(() => {
-    async function fetchEmployees() {
-      try {
-        const { data, error } = await supabase
-          .from('employees')
-          .select('*')
-          .eq('is_active', true)
-          .order('full_name')
+  function handleUserSelect(user) {
+    setPendingUser(user)
+  }
 
-        if (error) throw error
-        setEmployees(data || [])
-      } catch (err) {
-        setError(err.message)
-      } finally {
-        setLoading(false)
-      }
-    }
+  function handleBack() {
+    setPendingUser(null)
+  }
 
-    fetchEmployees()
-  }, [])
+  function handleLoginSuccess(userData) {
+    setCurrentUser(userData)
+    setPendingUser(null)
+  }
 
-  return (
-    <div style={{ padding: '40px', fontFamily: 'Arial', maxWidth: '600px', margin: '0 auto' }}>
-      <h1>ETS Time Tracker</h1>
-      <p style={{ color: 'gray' }}>Caguas, Puerto Rico</p>
-      <p style={{ color: 'gray', fontSize: '14px' }}>
-        Versión 0.0.2 — Conectado a Supabase
-      </p>
+  function handleLogout() {
+    setCurrentUser(null)
+    setPendingUser(null)
+  }
 
-      <hr style={{ margin: '24px 0' }} />
-
-      <h2>Empleados registrados</h2>
-
-      {loading && <p>Cargando empleados...</p>}
-
-      {error && (
-        <div style={{ background: '#fee', padding: '12px', borderRadius: '4px', color: '#c00' }}>
-          <strong>Error:</strong> {error}
-        </div>
-      )}
-
-      {!loading && !error && (
-        <ul style={{ listStyle: 'none', padding: 0 }}>
-          {employees.map((emp) => (
-            <li
-              key={emp.id}
-              style={{
-                padding: '10px',
-                borderBottom: '1px solid #eee',
-                display: 'flex',
-                justifyContent: 'space-between',
-              }}
-            >
-              <span>
-                <strong>{emp.full_name}</strong>
-                {emp.is_admin && (
-                  <span
-                    style={{
-                      background: '#fd0',
-                      fontSize: '10px',
-                      padding: '2px 6px',
-                      borderRadius: '4px',
-                      marginLeft: '8px',
-                    }}
-                  >
-                    ADMIN
-                  </span>
-                )}
-              </span>
-              <span style={{ color: 'gray', fontSize: '14px' }}>{emp.role}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {!loading && !error && employees.length > 0 && (
-        <p style={{ color: 'gray', fontSize: '12px', marginTop: '20px' }}>
-          Total: {employees.length} empleados activos
+  if (currentUser) {
+    return (
+      <div style={{ padding: '40px', fontFamily: 'Arial', textAlign: 'center', maxWidth: '500px', margin: '0 auto' }}>
+        <h1>¡Bienvenido!</h1>
+        <h2 style={{ color: '#16a34a' }}>{currentUser.full_name}</h2>
+        <p style={{ color: '#6b7280' }}>
+          Rol: {currentUser.role} {currentUser.is_admin && '(Admin)'}
         </p>
-      )}
-    </div>
-  )
-}
+        <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '20px' }}>
+          ✅ Login funcionando correctamente.<br />
+          Próximamente: pantalla principal según tu rol.
+        </p>
+        <button
+          onClick={handleLogout}
+          style={{
+            marginTop: '30px',
+            padding: '10px 20px',
+            background: '#dc2626',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '14px'
+          }}
+        >
+          Cerrar sesión
+        </button>
+      </div>
+    )
+  }
 
-export default App
+  if (pendingUser) {
+    return (
+      <PinScreen
+        user={pendingUser}
+        onBack={handleBack}
+        onLoginSuccess={handleLoginSuccess}
+      />
+    )
+  }
+
+  return <LoginScreen onUserSelect={handleUserSelect} />
+}
