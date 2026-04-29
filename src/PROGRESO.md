@@ -140,6 +140,79 @@ Sesión del 23 de abril de 2026.
 
 ## Para retomar en la próxima sesión
 
+---
+
+## Fase 2 - Sesión 2: Login y Autenticación 🔐
+
+Sesión del 24 de abril de 2026.
+
+### Lo que se logró hoy:
+
+**Vercel:**
+- [x] Variables de ambiente configuradas en Vercel (VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY)
+- [x] URL pública funcionando con Supabase: ets-time-tracker.vercel.app
+- [x] Deploy automático desde GitHub funcionando
+
+**Pantalla de Login (LoginScreen.jsx):**
+- [x] Componente separado en src/components/LoginScreen.jsx
+- [x] Lista de los 7 usuarios con acceso (approver, pm, supervisor)
+- [x] Agrupación por rol con encabezados
+- [x] Avatar con iniciales coloreado por rol
+- [x] Badge ADMIN para Bryan y Karla
+- [x] Diseño minimalista profesional con card centrada
+
+**Autenticación con PIN:**
+- [x] Extensión pgcrypto activada en Supabase
+- [x] Función SQL validate_pin con SECURITY DEFINER
+- [x] PINs hasheados con bcrypt en la base de datos
+- [x] PIN inicial 0000 cargado para los 7 usuarios con acceso
+- [x] Lógica de bloqueo: 3 intentos fallidos = 30 segundos bloqueado
+- [x] Contadores failed_attempts y locked_until en tabla employees
+
+**Pantalla de PIN (PinScreen.jsx):**
+- [x] Teclado numérico de 12 botones (0-9, C, ⌫)
+- [x] 4 puntos visuales que se llenan al escribir
+- [x] Validación contra Supabase via RPC validate_pin
+- [x] Animación shake al fallar
+- [x] Soporte de teclado físico Y táctil
+- [x] Botón Volver para regresar al login
+- [x] Mensajes de error con cuántos intentos quedan
+- [x] Auto-redirección al login después de bloqueo
+
+**Navegación entre pantallas:**
+- [x] App.jsx actualizado para manejar 3 estados: login, PIN, autenticado
+- [x] Pantalla de bienvenida placeholder con botón "Cerrar sesión"
+
+**Seguridad:**
+- [x] RLS reactivado en las 6 tablas
+- [x] Políticas de SELECT para anon y authenticated
+- [x] GRANTs explícitos donde se necesitan
+- [x] La función validate_pin usa SECURITY DEFINER para escribir aunque RLS esté activo
+- [x] PIN nunca viaja al cliente sin hashear
+
+### Decisiones técnicas importantes:
+- PIN inicial 0000 para todos en lugar de PINs únicos (cambiarán al entrar)
+- pgcrypto + bcrypt en lugar de hash JavaScript (estándar industrial)
+- Función SECURITY DEFINER permite escribir failed_attempts respetando RLS
+- Componentes separados en src/components/ para mantenibilidad
+
+### Pendientes Fase 2 (próxima sesión):
+- [ ] Pantalla "Cuenta" para que cada usuario cambie su propio PIN
+- [ ] Pantalla principal según rol (Aprobador HR vs PM vs Supervisor)
+- [ ] CRUD de proyectos (administrativos crean desde la app)
+- [ ] Pestaña admin para gestión de empleados, brigadas, reset de PINs
+- [ ] Políticas RLS más estrictas para escritura (UPDATE/INSERT/DELETE)
+
+### Estado del proyecto:
+```
+Fase 1: Setup e Infraestructura    100% ✅
+Fase 2: Auth y Catálogos            75% 🔄
+Fase 3: Captura de Horas             0% ⏳
+Fase 4: Firma y Aprobación           0% ⏳
+Fase 5: Reportes y Offline           0% ⏳
+Fase 6: Piloto y Lanzamiento         0% ⏳
+```
+
 Cuando empiece la Fase 2, usar este mensaje:
 
 > "Hola Claude. Retomo ETS Time Tracker. Ya completé la Fase 1 (setup, GitHub, Vercel, app corriendo). Ahora voy a empezar Fase 2: autenticación con PIN y catálogos. Por favor lee PROGRESO.md del proyecto para el contexto completo."
