@@ -213,6 +213,70 @@ Fase 5: Reportes y Offline           0% ⏳
 Fase 6: Piloto y Lanzamiento         0% ⏳
 ```
 
+---
+
+## Fase 2 - Sesión 3: Mi Cuenta y Layout con Tabs 🎨
+
+Sesión del 30 de abril de 2026.
+
+### Lo que se logró hoy:
+
+**Feature 1: Mi Cuenta y Cambio de PIN**
+- [x] Función SQL change_pin con validaciones (4 dígitos, no 0000, no igual al actual)
+- [x] Componente MyAccountScreen.jsx con info del usuario
+- [x] Aviso amarillo cuando PIN sigue siendo 0000
+- [x] Componente ChangePinScreen.jsx con flujo de 3 pasos
+- [x] Validación de PIN actual contra Supabase
+- [x] Confirmación de PIN nuevo (paso 3)
+- [x] Mensaje de éxito y vuelta automática a Mi Cuenta
+- [x] Actualización de pin_changed_at con timestamp
+
+**Feature 2: Layout con Tabs**
+- [x] Componente MainLayout.jsx con header sticky y tab bar inferior
+- [x] Header con saludo "Hola, [primer nombre]"
+- [x] Tabs dinámicas según rol del usuario
+- [x] HomeScreen.jsx placeholder con título según rol
+- [x] AdminScreen.jsx placeholder con 5 herramientas (empleados, brigadas, proyectos, reset PIN, reportes)
+- [x] Tab Admin solo visible para approvers con flag is_admin (Bryan y Karla)
+- [x] PMs y Supervisors NO ven tab Admin
+
+### Tabs según rol:
+- Approver + Admin (Bryan, Karla): Aprobaciones | Mi Cuenta | Admin
+- PM (Jonathan, Raul): Mis Horas | Mi Cuenta
+- Supervisor (Leonell, Jose, Luis, Francisco): Mi Brigada | Mi Cuenta
+
+### Decisiones técnicas importantes:
+- Los PMs no tienen acceso a Admin (separación de roles por seguridad)
+- Pantallas Home son placeholders hasta Fase 3
+- Pestaña Admin es placeholder hasta próxima sesión
+- change_pin valida del lado del servidor con SECURITY DEFINER
+
+### Pendientes Fase 2 (próxima sesión):
+- [ ] Construir CRUD de Empleados (crear, editar, desactivar)
+- [ ] Construir CRUD de Brigadas (modificar miembros y supervisores)
+- [ ] Construir CRUD de Proyectos
+- [ ] Función de Reset de PIN para empleados (solo admin)
+- [ ] Políticas RLS más estrictas para escritura
+
+### Estado del proyecto:
+- Fase 1: Setup e Infraestructura       100% ✅
+- Fase 2: Auth y Catálogos                85% 🔄
+- Fase 3: Captura de Horas                 0% ⏳
+- Fase 4: Firma y Aprobación               0% ⏳
+- Fase 5: Reportes y Offline               0% ⏳
+- Fase 6: Piloto y Lanzamiento             0% ⏳
+
+### Archivos del proyecto al cierre de la sesión:
+- src/App.jsx — manejo de estados de pantalla
+- src/supabaseClient.js — conexión a Supabase
+- src/components/LoginScreen.jsx — selección de usuario
+- src/components/PinScreen.jsx — ingreso de PIN
+- src/components/MyAccountScreen.jsx — información personal
+- src/components/ChangePinScreen.jsx — flujo de cambio de PIN
+- src/components/MainLayout.jsx — header + tabs
+- src/components/HomeScreen.jsx — placeholder según rol
+- src/components/AdminScreen.jsx — placeholder admin
+
 Cuando empiece la Fase 2, usar este mensaje:
 
 > "Hola Claude. Retomo ETS Time Tracker. Ya completé la Fase 1 (setup, GitHub, Vercel, app corriendo). Ahora voy a empezar Fase 2: autenticación con PIN y catálogos. Por favor lee PROGRESO.md del proyecto para el contexto completo."
