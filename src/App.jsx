@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import LoginScreen from './components/LoginScreen'
 import PinScreen from './components/PinScreen'
+import MainLayout from './components/MainLayout'
+import ChangePinScreen from './components/ChangePinScreen'
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null)
   const [pendingUser, setPendingUser] = useState(null)
+  const [view, setView] = useState('main') // 'main' | 'changePin'
 
   function handleUserSelect(user) {
     setPendingUser(user)
@@ -17,44 +20,53 @@ export default function App() {
   function handleLoginSuccess(userData) {
     setCurrentUser(userData)
     setPendingUser(null)
+    setView('main')
   }
 
   function handleLogout() {
     setCurrentUser(null)
     setPendingUser(null)
+    setView('main')
   }
 
+  function handleChangePin() {
+    setView('changePin')
+  }
+
+  function handleChangePinCancel() {
+    setView('main')
+  }
+
+  function handleChangePinSuccess() {
+    setCurrentUser({
+      ...currentUser,
+      pin_changed_at: new Date().toISOString()
+    })
+    setView('main')
+  }
+
+  // Usuario autenticado
   if (currentUser) {
+    if (view === 'changePin') {
+      return (
+        <ChangePinScreen
+          user={currentUser}
+          onCancel={handleChangePinCancel}
+          onSuccess={handleChangePinSuccess}
+        />
+      )
+    }
+
     return (
-      <div style={{ padding: '40px', fontFamily: 'Arial', textAlign: 'center', maxWidth: '500px', margin: '0 auto' }}>
-        <h1>¡Bienvenido!</h1>
-        <h2 style={{ color: '#16a34a' }}>{currentUser.full_name}</h2>
-        <p style={{ color: '#6b7280' }}>
-          Rol: {currentUser.role} {currentUser.is_admin && '(Admin)'}
-        </p>
-        <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '20px' }}>
-          ✅ Login funcionando correctamente.<br />
-          Próximamente: pantalla principal según tu rol.
-        </p>
-        <button
-          onClick={handleLogout}
-          style={{
-            marginTop: '30px',
-            padding: '10px 20px',
-            background: '#dc2626',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '14px'
-          }}
-        >
-          Cerrar sesión
-        </button>
-      </div>
+      <MainLayout
+        user={currentUser}
+        onChangePin={handleChangePin}
+        onLogout={handleLogout}
+      />
     )
   }
 
+  // Usuario en proceso de login
   if (pendingUser) {
     return (
       <PinScreen
