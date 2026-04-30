@@ -277,6 +277,65 @@ Sesión del 30 de abril de 2026.
 - src/components/HomeScreen.jsx — placeholder según rol
 - src/components/AdminScreen.jsx — placeholder admin
 
+## Fase 2 - Sesión 4: CRUD Completo de Admin 🛠️
+
+Sesión del 30 de abril de 2026.
+
+### Lo que se logró hoy:
+
+**CRUD de Empleados (AdminScreen.jsx):**
+- [x] Lista completa de empleados con búsqueda en tiempo real
+- [x] Avatar con iniciales, badge de rol con colores, badge ADMIN e INACTIVO
+- [x] Modal de crear empleado (nombre, rol, teléfono, is_admin)
+- [x] Modal de editar empleado con toggle activo/inactivo
+- [x] Reset de PIN a 0000 con confirmación desde el modal
+- [x] Función SQL reset_pin con SECURITY DEFINER
+
+**CRUD de Brigadas (BrigadesView.jsx):**
+- [x] Lista de brigadas con supervisor y conteo de miembros
+- [x] Modal de editar: nombre, supervisor (dropdown), toggle activo
+- [x] Lista de miembros con botón ✕ para remover
+- [x] Dropdown para agregar miembro nuevo
+- [x] Crear brigada nueva con miembros iniciales
+- [x] Sync de miembros: delete + re-insert al guardar
+
+**CRUD de Proyectos (ProjectsView.jsx):**
+- [x] Lista separada en ACTIVOS e INACTIVOS
+- [x] Búsqueda por nombre, número o cliente
+- [x] Estado vacío con mensaje cuando no hay proyectos
+- [x] Modal de crear: número, nombre, cliente
+- [x] Modal de editar con toggle activo/inactivo
+- [x] GRANT INSERT/UPDATE y política RLS para rol anon
+
+**Fix de errores:**
+- [x] AdminScreen.jsx faltaba export default (roto en Vercel)
+- [x] projects: permission denied → resuelto con GRANT + RLS policy
+
+### Archivos del proyecto al cierre de la sesión:
+- src/components/AdminScreen.jsx — CRUD empleados + navegación a secciones
+- src/components/BrigadesView.jsx — CRUD brigadas (archivo nuevo)
+- src/components/ProjectsView.jsx — CRUD proyectos (archivo nuevo)
+- src/components/LoginScreen.jsx
+- src/components/PinScreen.jsx
+- src/components/MyAccountScreen.jsx
+- src/components/ChangePinScreen.jsx
+- src/components/MainLayout.jsx
+- src/components/HomeScreen.jsx
+
+### Estado del proyecto:
+- Fase 1: Setup e Infraestructura       100% ✅
+- Fase 2: Auth y Catálogos              100% ✅
+- Fase 3: Captura de Horas               0% ⏳
+- Fase 4: Firma y Aprobación             0% ⏳
+- Fase 5: Reportes y Offline             0% ⏳
+- Fase 6: Piloto y Lanzamiento           0% ⏳
+
+### Pendientes Fase 3 (próxima sesión):
+- [ ] Pantalla semanal de captura de horas para supervisores
+- [ ] Pantalla individual para PMs
+- [ ] Cálculo de overtime (40h regular, 40-50h OT 1.5x, 50h+ OT 2x)
+- [ ] Descuento automático de 60 min de almuerzo
+
 Cuando empiece la Fase 2, usar este mensaje:
 
 > "Hola Claude. Retomo ETS Time Tracker. Ya completé la Fase 1 (setup, GitHub, Vercel, app corriendo). Ahora voy a empezar Fase 2: autenticación con PIN y catálogos. Por favor lee PROGRESO.md del proyecto para el contexto completo."

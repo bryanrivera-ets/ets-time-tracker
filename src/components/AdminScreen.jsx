@@ -3,23 +3,22 @@ import { supabase } from "../supabaseClient";
 import BrigadesView from "./BrigadesView";
 import ProjectsView from "./ProjectsView";
 
-const ROLES = ["approver", "pm", "supervisor", "worker"];
+const ROLES = ["approver", "pm", "supervisor", "employee"];
 
 const ROLE_LABELS = {
   approver: "Aprobador HR",
   pm: "Project Manager",
   supervisor: "Supervisor",
-  worker: "Trabajador",
+  employee: "Empleado",
 };
 
 const ROLE_COLORS = {
   approver: { color: "#7c3aed", bg: "#ede9fe" },
   pm: { color: "#2563eb", bg: "#dbeafe" },
   supervisor: { color: "#ca8a04", bg: "#fef9c3" },
-  worker: { color: "#374151", bg: "#f3f4f6" },
+  employee: { color: "#374151", bg: "#f3f4f6" },
 };
 
-// ─── Employee List View ────────────────────────────────────────────────────────
 function EmployeesView({ onBack }) {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -73,7 +72,7 @@ function EmployeesView({ onBack }) {
       ) : (
         <div style={s.list}>
           {filtered.map((emp) => {
-            const rc = ROLE_COLORS[emp.role] || ROLE_COLORS.worker;
+            const rc = ROLE_COLORS[emp.role] || ROLE_COLORS.employee;
             return (
               <button
                 key={emp.id}
@@ -112,12 +111,11 @@ function EmployeesView({ onBack }) {
   );
 }
 
-// ─── Employee Modal ────────────────────────────────────────────────────────────
 function EmployeeModal({ employee, onClose, onSaved, onError }) {
   const isNew = !employee.id;
   const [form, setForm] = useState({
     full_name: employee.full_name || "",
-    role: employee.role || "worker",
+    role: employee.role || "employee",
     phone: employee.phone || "",
     is_admin: employee.is_admin || false,
     is_active: employee.is_active !== false,
@@ -252,18 +250,15 @@ function EmployeeModal({ employee, onClose, onSaved, onError }) {
   );
 }
 
-// ─── Main AdminScreen ──────────────────────────────────────────────────────────
 export default function AdminScreen({ user }) {
   const [activeSection, setActiveSection] = useState(null);
 
   if (activeSection === "empleados") {
     return <EmployeesView onBack={() => setActiveSection(null)} />;
   }
-
   if (activeSection === "brigadas") {
     return <BrigadesView onBack={() => setActiveSection(null)} />;
   }
-
   if (activeSection === "proyectos") {
     return <ProjectsView onBack={() => setActiveSection(null)} user={user} />;
   }
@@ -311,7 +306,6 @@ export default function AdminScreen({ user }) {
   );
 }
 
-// ─── Styles ────────────────────────────────────────────────────────────────────
 const s = {
   page: { padding: "20px 12px 100px", background: "#f9fafb", minHeight: "calc(100vh - 80px)", fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' },
   container: { width: "100%", maxWidth: "420px", margin: "0 auto" },
