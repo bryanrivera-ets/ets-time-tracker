@@ -1,5 +1,6 @@
 import BrigadeWeekScreen from "./BrigadeWeekScreen";
 import PMWeekScreen from "./PMWeekScreen";
+import ApprovalsScreen from "./ApprovalsScreen";
 
 export default function HomeScreen({ user }) {
   if (user.role === "supervisor") {
@@ -11,15 +12,7 @@ export default function HomeScreen({ user }) {
   }
 
   if (user.role === "approver") {
-    return (
-      <div style={s.page}>
-        <div style={s.emptyState}>
-          <p style={s.emptyIcon}>✅</p>
-          <p style={s.emptyTitle}>Aprobaciones</p>
-          <p style={s.emptyDesc}>Panel de aprobación de hojas — próximamente en Fase 4.</p>
-        </div>
-      </div>
-    );
+    return <ApprovalsScreen user={user} />;
   }
 
   return (
