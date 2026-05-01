@@ -11,6 +11,27 @@ function calcHours(start, end, lunch) {
   return Math.max(0, (endMin - startMin - (lunch || 0)) / 60);
 }
 
+function toMinutes(time) {
+  if (!time) return 0;
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function checkOverlaps(blocks) {
+  for (let i = 0; i < blocks.length; i++) {
+    for (let j = i + 1; j < blocks.length; j++) {
+      const aStart = toMinutes(blocks[i].start_time);
+      const aEnd = toMinutes(blocks[i].end_time);
+      const bStart = toMinutes(blocks[j].start_time);
+      const bEnd = toMinutes(blocks[j].end_time);
+      if (aStart < bEnd && bStart < aEnd) {
+        return `El Bloque ${i + 1} (${blocks[i].start_time}–${blocks[i].end_time}) se solapa con el Bloque ${j + 1} (${blocks[j].start_time}–${blocks[j].end_time}).`;
+      }
+    }
+  }
+  return null;
+}
+
 function TimeInput({ label, value, onChange }) {
   return (
     <div style={s.timeField}>
@@ -89,7 +110,6 @@ function EntryBlock({ block, index, projects, onChange, onRemove, canRemove }) {
 export default function DayEntryModal({ employee, date, dayIndex, existingEntries, sheetId, projects, onClose, onSaved, onError }) {
   const isSunday = dayIndex === 6;
 
-  // Initialize blocks from existing entries or a default empty block
   const [blocks, setBlocks] = useState(() => {
     if (existingEntries && existingEntries.length > 0) {
       return existingEntries.map((e) => ({
@@ -127,7 +147,7 @@ export default function DayEntryModal({ employee, date, dayIndex, existingEntrie
   const totalHours = blocks.reduce((sum, b) => sum + calcHours(b.start_time, b.end_time, b.lunch_minutes), 0);
 
   async function handleSave() {
-    // Validate
+    // Validate individual blocks
     for (let i = 0; i < blocks.length; i++) {
       const b = blocks[i];
       if (!b.start_time || !b.end_time) { onError(`Bloque ${i + 1}: entrada y salida son requeridas.`); return; }
@@ -135,15 +155,19 @@ export default function DayEntryModal({ employee, date, dayIndex, existingEntrie
       if (h <= 0) { onError(`Bloque ${i + 1}: la salida debe ser después de la entrada.`); return; }
     }
 
+    // ✅ Validate overlaps between blocks
+    if (blocks.length > 1) {
+      const overlapError = checkOverlaps(blocks);
+      if (overlapError) { onError(overlapError); return; }
+    }
+
     setSaving(true);
 
-    // Delete existing entries for this employee/date
     const existingIds = existingEntries.map((e) => e.id).filter(Boolean);
     if (existingIds.length > 0) {
       await supabase.from("time_entries").delete().in("id", existingIds);
     }
 
-    // Insert all blocks
     const toInsert = blocks.map((b) => ({
       sheet_id: sheetId,
       employee_id: employee.id,
