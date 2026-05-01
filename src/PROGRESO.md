@@ -476,6 +476,40 @@ Sesión del 1 de mayo de 2026.
 - [ ] Aprobar / rechazar hojas con comentario
 - [ ] Exportación a Excel/CSV para nómina
 
+## Fase 3 - Sesión 3: Validación y Cierre de Fase 3 ✅
+
+Sesión del 1 de mayo de 2026.
+
+### Lo que se logró hoy:
+
+**DayEntryModal.jsx (actualizado):**
+- [x] Validación de solapamiento entre bloques de horas
+- [x] Función checkOverlaps que compara todos los pares de bloques
+- [x] Error específico indicando qué bloques se solapan y sus horarios
+- [x] Bloquea el guardado hasta que el solapamiento se corrija
+
+**Fixes adicionales:**
+- [x] PMWeekScreen: owner_type corregido de "employee" a "pm"
+- [x] GRANT EXECUTE en validate_pin, reset_pin, change_pin para rol anon
+- [x] Limpieza de time_entries con sheet_id NULL
+- [x] Verificado funcionamiento completo en Vercel (supervisores y PMs)
+
+### Estado del proyecto:
+- Fase 1: Setup e Infraestructura       100% ✅
+- Fase 2: Auth y Catálogos              100% ✅
+- Fase 3: Captura de Horas              100% ✅
+- Fase 4: Firma y Aprobación              0% ⏳
+- Fase 5: Reportes y Offline              0% ⏳
+- Fase 6: Piloto y Lanzamiento            0% ⏳
+
+### Pendientes Fase 4 (próxima sesión):
+- [ ] Panel de aprobación para Bryan y Karla (approvers)
+- [ ] Lista de hojas enviadas pendientes de aprobación
+- [ ] Ver detalle de hoja antes de aprobar
+- [ ] Aprobar hoja — cambia status a "approved"
+- [ ] Rechazar hoja con comentario — regresa a "draft"
+- [ ] Exportación a Excel/CSV para nómina
+
 Cuando empiece la Fase 2, usar este mensaje:
 
 > "Hola Claude. Retomo ETS Time Tracker. Ya completé la Fase 1 (setup, GitHub, Vercel, app corriendo). Ahora voy a empezar Fase 2: autenticación con PIN y catálogos. Por favor lee PROGRESO.md del proyecto para el contexto completo."
