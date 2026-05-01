@@ -510,6 +510,83 @@ Sesión del 1 de mayo de 2026.
 - [ ] Rechazar hoja con comentario — regresa a "draft"
 - [ ] Exportación a Excel/CSV para nómina
 
+## Fase 4 - Sesión 1: Panel de Aprobaciones y Exportación Excel ✅
+
+Sesión del 1 de mayo de 2026.
+
+### Lo que se logró hoy:
+
+**ApprovalsScreen.jsx (archivo nuevo):**
+- [x] Lista de hojas enviadas pendientes de aprobación
+- [x] Badge rojo con conteo de hojas pendientes
+- [x] Filtros: Pendientes / Aprobadas / Todas
+- [x] Card por hoja con nombre del owner (brigada o PM), semana, fecha de envío y firma
+- [x] Íconos diferenciados: 🏗 para brigadas, 👤 para PMs
+- [x] Badge de status con colores (amarillo pendiente, verde aprobada)
+
+**ApprovalDetailScreen.jsx (archivo nuevo):**
+- [x] Detalle completo de la hoja con resumen igual al WeekSummaryScreen
+- [x] Card de owner con nombre, semana y firma
+- [x] Card azul con total de horas de la semana
+- [x] Desglose por empleado con Regular / OT×1.5 / OT×2
+- [x] Desglose por proyecto con conteo de empleados
+- [x] Detalle por día con horario y proyecto
+- [x] Botón ✅ Aprobar con confirmación
+- [x] Botón ❌ Rechazar con comentario opcional
+- [x] Al aprobar: status → approved, guarda approved_at, approved_by
+- [x] Al rechazar: status → draft, guarda rejection_note, limpia firma
+- [x] Banner de aprobación con fecha
+- [x] Botón 📥 Excel para exportar
+
+**exportToExcel.js (archivo nuevo en src/utils/):**
+- [x] Librería xlsx instalada (npm install xlsx)
+- [x] Hoja "Resumen": una fila por empleado con totales reg/OT×1.5/OT×2
+- [x] Fila TOTAL al final del resumen
+- [x] Hoja "Detalle": una fila por día por empleado con horario y proyecto
+- [x] Encabezado con nombre de ETS Corporation, brigada/PM, semana y estado
+- [x] Nombre de archivo automático: ETS_Horas_[Owner]_[fecha].xlsx
+- [x] Anchos de columna configurados para legibilidad
+
+**HomeScreen.jsx (actualizado):**
+- [x] Approvers ven ApprovalsScreen en tab "Aprobaciones"
+
+**Base de datos:**
+- [x] Columna rejection_note añadida a weekly_sheets
+
+**Verificado en Vercel:** ✅ Todo funcionando en producción
+
+### Archivos del proyecto al cierre de la sesión:
+- src/components/ApprovalsScreen.jsx — lista de hojas (nuevo)
+- src/components/ApprovalDetailScreen.jsx — detalle + aprobar/rechazar (nuevo)
+- src/utils/exportToExcel.js — exportación a Excel (nuevo)
+- src/components/HomeScreen.jsx — actualizado con ApprovalsScreen
+- src/components/WeekSummaryScreen.jsx
+- src/components/BrigadeWeekScreen.jsx
+- src/components/PMWeekScreen.jsx
+- src/components/DayEntryModal.jsx
+- src/components/AdminScreen.jsx
+- src/components/BrigadesView.jsx
+- src/components/ProjectsView.jsx
+- src/components/LoginScreen.jsx
+- src/components/PinScreen.jsx
+- src/components/MyAccountScreen.jsx
+- src/components/ChangePinScreen.jsx
+- src/components/MainLayout.jsx
+
+### Estado del proyecto:
+- Fase 1: Setup e Infraestructura       100% ✅
+- Fase 2: Auth y Catálogos              100% ✅
+- Fase 3: Captura de Horas              100% ✅
+- Fase 4: Firma y Aprobación            100% ✅
+- Fase 5: Reportes y Offline              0% ⏳
+- Fase 6: Piloto y Lanzamiento            0% ⏳
+
+### Pendientes Fase 5 (próxima sesión):
+- [ ] Dashboard con gráficas de horas por proyecto
+- [ ] Ranking de empleados por horas
+- [ ] Evolución semanal de OT
+- [ ] Capacidad offline con sincronización
+
 Cuando empiece la Fase 2, usar este mensaje:
 
 > "Hola Claude. Retomo ETS Time Tracker. Ya completé la Fase 1 (setup, GitHub, Vercel, app corriendo). Ahora voy a empezar Fase 2: autenticación con PIN y catálogos. Por favor lee PROGRESO.md del proyecto para el contexto completo."
