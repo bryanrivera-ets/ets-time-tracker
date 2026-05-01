@@ -336,6 +336,75 @@ Sesión del 30 de abril de 2026.
 - [ ] Cálculo de overtime (40h regular, 40-50h OT 1.5x, 50h+ OT 2x)
 - [ ] Descuento automático de 60 min de almuerzo
 
+## Fase 3 - Sesión 1: Captura de Horas para Supervisores ⏱️
+
+Sesión del 1 de mayo de 2026.
+
+### Lo que se logró hoy:
+
+**BrigadeWeekScreen.jsx (archivo nuevo):**
+- [x] Pantalla principal de captura de horas para supervisores
+- [x] Muestra la brigada asignada al supervisor automáticamente
+- [x] Navegación entre semanas (← →) con badge "Esta semana"
+- [x] Tabs de días Lun-Dom con fecha y punto verde si tiene horas
+- [x] Domingo resaltado en rojo automáticamente
+- [x] Día de hoy resaltado con borde azul
+- [x] Grid de empleados con 7 celdas por empleado
+- [x] Cada celda muestra horas + rango de tiempo si tiene entradas
+- [x] Resumen semanal por empleado: Regular / OT×1.5 / OT×2
+- [x] Lógica de OT: 0-40h regular, 40h+ OT×1.5, domingos OT×2
+- [x] Crea weekly_sheet automáticamente si no existe
+- [x] Estado locked cuando hoja está aprobada o enviada
+
+**DayEntryModal.jsx (archivo nuevo):**
+- [x] Modal de entrada/salida por empleado por día
+- [x] Time picker de entrada y salida
+- [x] Botones de almuerzo: Sin almuerzo / 30 min / 60 min
+- [x] Dropdown de proyecto activo
+- [x] Soporte de múltiples bloques de horas (cambio de proyecto en el día)
+- [x] Botón "+ Agregar bloque de horas"
+- [x] Cálculo de horas netas por bloque en tiempo real
+- [x] Total del día calculado automáticamente
+- [x] Botón para borrar horas del día
+- [x] Tag OT×2 visible cuando es domingo
+
+**HomeScreen.jsx (actualizado):**
+- [x] Supervisores ven BrigadeWeekScreen en tab "Mi Brigada"
+- [x] PMs y Aprobadores ven placeholder hasta Fase 3/4
+
+**Base de datos:**
+- [x] Columna lunch_minutes añadida a time_entries (default 30)
+- [x] GRANTs y políticas RLS para INSERT/UPDATE/DELETE/SELECT en time_entries
+- [x] GRANTs y políticas RLS para INSERT/UPDATE/SELECT en weekly_sheets
+
+### Archivos del proyecto al cierre de la sesión:
+- src/components/BrigadeWeekScreen.jsx — pantalla semanal supervisor (nuevo)
+- src/components/DayEntryModal.jsx — modal de entrada de horas (nuevo)
+- src/components/HomeScreen.jsx — actualizado con routing por rol
+- src/components/AdminScreen.jsx
+- src/components/BrigadesView.jsx
+- src/components/ProjectsView.jsx
+- src/components/LoginScreen.jsx
+- src/components/PinScreen.jsx
+- src/components/MyAccountScreen.jsx
+- src/components/ChangePinScreen.jsx
+- src/components/MainLayout.jsx
+
+### Estado del proyecto:
+- Fase 1: Setup e Infraestructura       100% ✅
+- Fase 2: Auth y Catálogos              100% ✅
+- Fase 3: Captura de Horas               40% 🔄
+- Fase 4: Firma y Aprobación              0% ⏳
+- Fase 5: Reportes y Offline              0% ⏳
+- Fase 6: Piloto y Lanzamiento            0% ⏳
+
+### Pendientes Fase 3 (próxima sesión):
+- [ ] Verificar que funciona en Vercel (RLS policies)
+- [ ] Pantalla de captura individual para PMs
+- [ ] Resumen semanal con totales de horas por proyecto
+- [ ] Validación de solapamiento de bloques en el mismo día
+- [ ] PIN de firma del supervisor al enviar la hoja
+
 Cuando empiece la Fase 2, usar este mensaje:
 
 > "Hola Claude. Retomo ETS Time Tracker. Ya completé la Fase 1 (setup, GitHub, Vercel, app corriendo). Ahora voy a empezar Fase 2: autenticación con PIN y catálogos. Por favor lee PROGRESO.md del proyecto para el contexto completo."
