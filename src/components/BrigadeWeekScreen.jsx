@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
 import DayEntryModal from "./DayEntryModal";
+import WeekSummaryScreen from "./WeekSummaryScreen";
 
 const DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
-// Get Monday of the current week
 function getWeekStart(date = new Date()) {
   const d = new Date(date);
-  const day = d.getDay(); // 0=Sun, 1=Mon...
+  const day = d.getDay();
   const diff = (day === 0 ? -6 : 1 - day);
   d.setDate(d.getDate() + diff);
   d.setHours(0, 0, 0, 0);
@@ -21,38 +21,26 @@ function addDays(date, n) {
 }
 
 function toDateStr(date) {
-  return date.toISOString().split("T")[0]; // YYYY-MM-DD
-}
-
-function formatDateHeader(date) {
-  return date.toLocaleDateString("es-PR", { weekday: "short", month: "short", day: "numeric" });
-}
-
-function parseTime(str) {
-  if (!str) return null;
-  const [h, m] = str.split(":").map(Number);
-  return h * 60 + m;
+  return date.toISOString().split("T")[0];
 }
 
 function calcHours(start, end, lunch) {
-  const s = parseTime(start);
-  const e = parseTime(end);
-  if (s == null || e == null || e <= s) return 0;
-  return Math.max(0, (e - s - (lunch || 0)) / 60);
+  if (!start || !end) return 0;
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  const startMin = sh * 60 + sm;
+  const endMin = eh * 60 + em;
+  if (endMin <= startMin) return 0;
+  return Math.max(0, (endMin - startMin - (lunch || 0)) / 60);
 }
 
-// Calculate OT for the week given daily hours and which days are Sunday
 function calcWeekOT(entries) {
   let regular = 0, ot15 = 0, ot2 = 0;
   let weeklyRegularBank = 0;
-
-  // Sort by date ascending
   const sorted = [...entries].sort((a, b) => a.work_date.localeCompare(b.work_date));
-
   for (const entry of sorted) {
     const isSunday = new Date(entry.work_date + "T12:00:00").getDay() === 0;
     const hours = calcHours(entry.start_time, entry.end_time, entry.lunch_minutes);
-
     if (isSunday) {
       ot2 += hours;
     } else {
@@ -64,7 +52,6 @@ function calcWeekOT(entries) {
       weeklyRegularBank += reg;
     }
   }
-
   return { regular, ot15, ot2, total: regular + ot15 + ot2 };
 }
 
@@ -73,11 +60,12 @@ export default function BrigadeWeekScreen({ user }) {
   const [brigade, setBrigade] = useState(null);
   const [members, setMembers] = useState([]);
   const [projects, setProjects] = useState([]);
-  const [entries, setEntries] = useState([]); // all time_entries for this week
+  const [entries, setEntries] = useState([]);
   const [sheet, setSheet] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedDay, setSelectedDay] = useState(null); // index 0-6
-  const [modalData, setModalData] = useState(null); // { employee, date, entries }
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [modalData, setModalData] = useState(null);
+  const [showSummary, setShowSummary] = useState(false);
   const [toast, setToast] = useState(null);
 
   useEffect(() => { fetchAll(); }, [weekStart]);
@@ -85,7 +73,6 @@ export default function BrigadeWeekScreen({ user }) {
   async function fetchAll() {
     setLoading(true);
 
-    // 1. Get supervisor's brigade
     const { data: brigData } = await supabase
       .from("brigades")
       .select("id, name")
@@ -96,7 +83,6 @@ export default function BrigadeWeekScreen({ user }) {
     if (!brigData) { setLoading(false); return; }
     setBrigade(brigData);
 
-    // 2. Get brigade members
     const { data: membData } = await supabase
       .from("brigade_members")
       .select("employee_id, employees(id, full_name)")
@@ -105,7 +91,6 @@ export default function BrigadeWeekScreen({ user }) {
     const memberList = (membData || []).map((m) => m.employees).filter(Boolean);
     setMembers(memberList);
 
-    // 3. Get active projects
     const { data: projData } = await supabase
       .from("projects")
       .select("id, number, name")
@@ -113,7 +98,6 @@ export default function BrigadeWeekScreen({ user }) {
       .order("name");
     setProjects(projData || []);
 
-    // 4. Get or create weekly sheet
     const weekStr = toDateStr(weekStart);
     let { data: sheetData } = await supabase
       .from("weekly_sheets")
@@ -133,9 +117,7 @@ export default function BrigadeWeekScreen({ user }) {
     }
     setSheet(sheetData);
 
-    // 5. Get time entries for this week
     if (sheetData) {
-      const memberIds = memberList.map((m) => m.id);
       const weekEnd = toDateStr(addDays(weekStart, 6));
       const { data: entriesData } = await supabase
         .from("time_entries")
@@ -160,17 +142,18 @@ export default function BrigadeWeekScreen({ user }) {
   }
 
   function getHoursForEmployeeDay(employeeId, dayIndex) {
-    const dayEntries = getEntriesForEmployeeDay(employeeId, dayIndex);
-    return dayEntries.reduce((sum, e) => sum + calcHours(e.start_time, e.end_time, e.lunch_minutes), 0);
+    return getEntriesForEmployeeDay(employeeId, dayIndex)
+      .reduce((sum, e) => sum + calcHours(e.start_time, e.end_time, e.lunch_minutes), 0);
   }
 
   function getTotalHoursForEmployee(employeeId) {
-    const empEntries = entries.filter((e) => e.employee_id === employeeId);
-    return empEntries.reduce((sum, e) => sum + calcHours(e.start_time, e.end_time, e.lunch_minutes), 0);
+    return entries
+      .filter((e) => e.employee_id === employeeId)
+      .reduce((sum, e) => sum + calcHours(e.start_time, e.end_time, e.lunch_minutes), 0);
   }
 
   function openModal(employee, dayIndex) {
-    if (sheet?.status === "approved") return;
+    if (isLocked) return;
     const date = toDateStr(addDays(weekStart, dayIndex));
     const dayEntries = getEntriesForEmployeeDay(employee.id, dayIndex);
     setModalData({ employee, date, dayIndex, existingEntries: dayEntries });
@@ -178,13 +161,26 @@ export default function BrigadeWeekScreen({ user }) {
 
   const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const isLocked = sheet?.status === "approved" || sheet?.status === "submitted";
-
-  // Week navigation
-  function prevWeek() { setWeekStart(addDays(weekStart, -7)); }
-  function nextWeek() { setWeekStart(addDays(weekStart, 7)); }
   const isCurrentWeek = toDateStr(weekStart) === toDateStr(getWeekStart());
+  const totalWeekHours = entries.reduce((sum, e) => sum + calcHours(e.start_time, e.end_time, e.lunch_minutes), 0);
+
+  // Show summary screen
+  if (showSummary) {
+    return (
+      <WeekSummaryScreen
+        user={user}
+        sheet={sheet}
+        entries={entries}
+        members={members}
+        projects={projects}
+        onBack={() => setShowSummary(false)}
+        onSigned={() => { setShowSummary(false); fetchAll(); showToast("Hoja firmada y enviada ✓"); }}
+      />
+    );
+  }
 
   if (loading) return <div style={s.page}><p style={s.loadingText}>Cargando...</p></div>;
+
   if (!brigade) return (
     <div style={s.page}>
       <div style={s.emptyState}>
@@ -205,9 +201,15 @@ export default function BrigadeWeekScreen({ user }) {
 
       {/* Brigade + week header */}
       <div style={s.headerBox}>
-        <div style={s.brigadeName}>🏗 {brigade.name}</div>
+        <div style={s.brigadeRow}>
+          <div style={s.brigadeName}>🏗 {brigade.name}</div>
+          {/* Summary button */}
+          <button style={s.summaryBtn} onClick={() => setShowSummary(true)}>
+            {isLocked ? "📄 Ver Resumen" : "✍️ Resumen y Firmar"}
+          </button>
+        </div>
         <div style={s.weekNav}>
-          <button style={s.navBtn} onClick={prevWeek}>‹</button>
+          <button style={s.navBtn} onClick={() => setWeekStart(addDays(weekStart, -7))}>‹</button>
           <div style={s.weekLabel}>
             <span style={s.weekDates}>
               {weekDates[0].toLocaleDateString("es-PR", { month: "short", day: "numeric" })} —{" "}
@@ -215,8 +217,23 @@ export default function BrigadeWeekScreen({ user }) {
             </span>
             {isCurrentWeek && <span style={s.currentBadge}>Esta semana</span>}
           </div>
-          <button style={s.navBtn} onClick={nextWeek}>›</button>
+          <button style={s.navBtn} onClick={() => setWeekStart(addDays(weekStart, 7))}>›</button>
         </div>
+
+        {/* Status row */}
+        <div style={s.statusRow}>
+          <span style={{
+            ...s.statusBadge,
+            background: sheet?.status === "approved" ? "#dcfce7" : sheet?.status === "submitted" ? "#dbeafe" : "#f3f4f6",
+            color: sheet?.status === "approved" ? "#166534" : sheet?.status === "submitted" ? "#1e40af" : "#6b7280",
+          }}>
+            {sheet?.status === "approved" ? "✅ Aprobada" : sheet?.status === "submitted" ? "📤 Enviada" : "✏️ Borrador"}
+          </span>
+          {totalWeekHours > 0 && (
+            <span style={s.totalPill}>{totalWeekHours.toFixed(1)}h totales</span>
+          )}
+        </div>
+
         {isLocked && (
           <div style={s.lockedBanner}>
             🔒 Hoja {sheet.status === "approved" ? "aprobada" : "enviada"} — solo lectura
@@ -256,10 +273,8 @@ export default function BrigadeWeekScreen({ user }) {
         {members.map((emp) => {
           const totalHours = getTotalHoursForEmployee(emp.id);
           const otInfo = calcWeekOT(entries.filter((e) => e.employee_id === emp.id));
-
           return (
             <div key={emp.id} style={s.empBlock}>
-              {/* Employee header */}
               <div style={s.empHeader}>
                 <div style={s.empAvatar}>
                   {emp.full_name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
@@ -274,8 +289,6 @@ export default function BrigadeWeekScreen({ user }) {
                 </div>
                 <div style={s.totalBadge}>{totalHours.toFixed(1)}h</div>
               </div>
-
-              {/* Day cells — show all 7 or just selected */}
               <div style={s.dayCells}>
                 {Array.from({ length: 7 }, (_, i) => {
                   if (selectedDay !== null && selectedDay !== i) return null;
@@ -284,7 +297,6 @@ export default function BrigadeWeekScreen({ user }) {
                   const hours = getHoursForEmployeeDay(emp.id, i);
                   const isSun = i === 6;
                   const isToday = toDateStr(date) === toDateStr(new Date());
-
                   return (
                     <button
                       key={i}
@@ -321,7 +333,6 @@ export default function BrigadeWeekScreen({ user }) {
         })}
       </div>
 
-      {/* Modal */}
       {modalData && (
         <DayEntryModal
           employee={modalData.employee}
@@ -348,12 +359,17 @@ const s = {
   emptyDesc: { fontSize: "13px", color: "#9ca3af" },
   toast: { position: "fixed", top: "16px", left: "50%", transform: "translateX(-50%)", color: "#fff", padding: "10px 18px", borderRadius: "10px", fontSize: "14px", fontWeight: "500", zIndex: 2000, whiteSpace: "nowrap", boxShadow: "0 4px 12px rgba(0,0,0,0.2)" },
   headerBox: { marginBottom: "12px" },
-  brigadeName: { fontSize: "16px", fontWeight: "600", color: "#111827", marginBottom: "8px" },
+  brigadeRow: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" },
+  brigadeName: { fontSize: "16px", fontWeight: "600", color: "#111827" },
+  summaryBtn: { background: "#16a34a", color: "#fff", border: "none", borderRadius: "8px", padding: "7px 12px", fontSize: "12px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit" },
   weekNav: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" },
   navBtn: { background: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px", width: "32px", height: "32px", fontSize: "18px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#374151" },
   weekLabel: { flex: 1, display: "flex", alignItems: "center", gap: "8px" },
   weekDates: { fontSize: "14px", fontWeight: "500", color: "#374151" },
   currentBadge: { fontSize: "11px", background: "#dbeafe", color: "#1d4ed8", borderRadius: "6px", padding: "2px 7px", fontWeight: "500" },
+  statusRow: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" },
+  statusBadge: { fontSize: "11px", fontWeight: "600", borderRadius: "6px", padding: "3px 8px" },
+  totalPill: { fontSize: "11px", color: "#374151", background: "#f3f4f6", borderRadius: "6px", padding: "3px 8px" },
   lockedBanner: { background: "#fef9c3", border: "1px solid #fde68a", borderRadius: "8px", padding: "8px 12px", fontSize: "12px", color: "#92400e" },
   dayTabs: { display: "flex", gap: "4px", marginBottom: "12px", overflowX: "auto", paddingBottom: "2px" },
   dayTab: { flex: "0 0 auto", minWidth: "44px", padding: "6px 4px", borderRadius: "10px", cursor: "pointer", textAlign: "center", fontFamily: "inherit", position: "relative" },
