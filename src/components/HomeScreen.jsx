@@ -1,4 +1,5 @@
 import BrigadeWeekScreen from "./BrigadeWeekScreen";
+import PMWeekScreen from "./PMWeekScreen";
 
 export default function HomeScreen({ user }) {
   if (user.role === "supervisor") {
@@ -6,15 +7,7 @@ export default function HomeScreen({ user }) {
   }
 
   if (user.role === "pm") {
-    return (
-      <div style={s.page}>
-        <div style={s.emptyState}>
-          <p style={s.emptyIcon}>🕐</p>
-          <p style={s.emptyTitle}>Mis Horas</p>
-          <p style={s.emptyDesc}>Captura de horas para PMs — próximamente en Fase 3.</p>
-        </div>
-      </div>
-    );
+    return <PMWeekScreen user={user} />;
   }
 
   if (user.role === "approver") {
