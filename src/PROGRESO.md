@@ -405,6 +405,77 @@ Sesión del 1 de mayo de 2026.
 - [ ] Validación de solapamiento de bloques en el mismo día
 - [ ] PIN de firma del supervisor al enviar la hoja
 
+## Fase 3 - Sesión 2: Resumen Semanal, Firma y Pantalla de PMs ✍️
+
+Sesión del 1 de mayo de 2026.
+
+### Lo que se logró hoy:
+
+**WeekSummaryScreen.jsx (archivo nuevo):**
+- [x] Pantalla de resumen semanal accesible desde botón en Mi Brigada
+- [x] Card azul con total de horas de la semana
+- [x] Desglose por empleado con horas regular / OT×1.5 / OT×2
+- [x] Desglose por proyecto con conteo de empleados
+- [x] Flujo de firma con PIN en 3 pasos: botón → confirmación → PIN
+- [x] Teclado numérico de PIN integrado en la misma pantalla
+- [x] Fix: parámetro correcto pin_attempt (no pin_input) en validate_pin
+- [x] Al firmar: status → submitted, guarda signature, signed_at, submitted_at
+- [x] Banner de estado cuando hoja está enviada o aprobada
+- [x] Hoja bloqueada (solo lectura) después de firmar
+
+**BrigadeWeekScreen.jsx (actualizado):**
+- [x] Botón "✍️ Resumen y Firmar" en header de la pantalla
+- [x] Badge de status (Borrador / Enviada / Aprobada)
+- [x] Total de horas de la semana visible en el header
+- [x] Navegación a WeekSummaryScreen
+
+**PMWeekScreen.jsx (archivo nuevo):**
+- [x] Pantalla de captura individual para Project Managers
+- [x] Grid de 7 días (Lun-Dom) con card por día
+- [x] Modal simplificado: total de horas + proyecto (sin entrada/salida)
+- [x] Botones rápidos de horas: 4h, 6h, 8h, 10h, 12h
+- [x] Soporte de múltiples bloques (cambio de proyecto en el día)
+- [x] Cálculo de OT semanal en tiempo real
+- [x] Resumen y firma via WeekSummaryScreen (reutilizado)
+- [x] Fix: owner_type = "pm" (no "employee") — constraint de DB
+
+**Fixes de DB:**
+- [x] GRANT EXECUTE en validate_pin, reset_pin, change_pin para rol anon
+- [x] Limpieza de time_entries con sheet_id NULL
+
+### Archivos del proyecto al cierre de la sesión:
+- src/components/WeekSummaryScreen.jsx — resumen y firma (nuevo)
+- src/components/BrigadeWeekScreen.jsx — actualizado con resumen
+- src/components/PMWeekScreen.jsx — captura para PMs (nuevo)
+- src/components/HomeScreen.jsx — actualizado con routing PM
+- src/components/DayEntryModal.jsx
+- src/components/AdminScreen.jsx
+- src/components/BrigadesView.jsx
+- src/components/ProjectsView.jsx
+- src/components/LoginScreen.jsx
+- src/components/PinScreen.jsx
+- src/components/MyAccountScreen.jsx
+- src/components/ChangePinScreen.jsx
+- src/components/MainLayout.jsx
+
+### Estado del proyecto:
+- Fase 1: Setup e Infraestructura       100% ✅
+- Fase 2: Auth y Catálogos              100% ✅
+- Fase 3: Captura de Horas               90% 🔄
+- Fase 4: Firma y Aprobación              0% ⏳
+- Fase 5: Reportes y Offline              0% ⏳
+- Fase 6: Piloto y Lanzamiento            0% ⏳
+
+### Pendientes Fase 3 (próxima sesión):
+- [ ] Validación de solapamiento de bloques en el mismo día
+- [ ] Completar Fase 3 al 100% y arrancar Fase 4
+
+### Pendientes Fase 4 (próxima):
+- [ ] Panel de aprobación para Bryan y Karla
+- [ ] Lista de hojas enviadas pendientes de aprobación
+- [ ] Aprobar / rechazar hojas con comentario
+- [ ] Exportación a Excel/CSV para nómina
+
 Cuando empiece la Fase 2, usar este mensaje:
 
 > "Hola Claude. Retomo ETS Time Tracker. Ya completé la Fase 1 (setup, GitHub, Vercel, app corriendo). Ahora voy a empezar Fase 2: autenticación con PIN y catálogos. Por favor lee PROGRESO.md del proyecto para el contexto completo."
