@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
+import { exportSheetToExcel } from "../utils/exportToExcel";
 
 function calcHours(start, end, lunch) {
   if (!start || !end) return 0;
@@ -42,7 +43,7 @@ export default function ApprovalDetailScreen({ sheet, user, onBack, onActionDone
   const [projects, setProjects] = useState([]);
   const [ownerName, setOwnerName] = useState("");
   const [loading, setLoading] = useState(true);
-  const [action, setAction] = useState(null); // null | 'approve' | 'reject'
+  const [action, setAction] = useState(null);
   const [rejectNote, setRejectNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
@@ -52,7 +53,6 @@ export default function ApprovalDetailScreen({ sheet, user, onBack, onActionDone
   async function fetchDetail() {
     setLoading(true);
 
-    // Get entries
     const { data: entriesData } = await supabase
       .from("time_entries")
       .select("*")
@@ -60,19 +60,14 @@ export default function ApprovalDetailScreen({ sheet, user, onBack, onActionDone
       .order("work_date");
     setEntries(entriesData || []);
 
-    // Get projects
     const { data: projData } = await supabase
       .from("projects")
       .select("id, number, name");
     setProjects(projData || []);
 
-    // Get owner info and members
     if (sheet.owner_type === "brigade") {
       const { data: brigData } = await supabase
-        .from("brigades")
-        .select("id, name")
-        .eq("id", sheet.owner_id)
-        .single();
+        .from("brigades").select("id, name").eq("id", sheet.owner_id).single();
       setOwnerName(brigData?.name || "Brigada");
 
       const { data: membData } = await supabase
@@ -82,10 +77,7 @@ export default function ApprovalDetailScreen({ sheet, user, onBack, onActionDone
       setMembers((membData || []).map((m) => m.employees).filter(Boolean));
     } else {
       const { data: empData } = await supabase
-        .from("employees")
-        .select("id, full_name")
-        .eq("id", sheet.owner_id)
-        .single();
+        .from("employees").select("id, full_name").eq("id", sheet.owner_id).single();
       setOwnerName(empData?.full_name || "PM");
       setMembers(empData ? [empData] : []);
     }
@@ -102,12 +94,7 @@ export default function ApprovalDetailScreen({ sheet, user, onBack, onActionDone
     setSaving(true);
     const { error } = await supabase
       .from("weekly_sheets")
-      .update({
-        status: "approved",
-        approved_at: new Date().toISOString(),
-        approved_by: user.id,
-        rejection_note: null,
-      })
+      .update({ status: "approved", approved_at: new Date().toISOString(), approved_by: user.id, rejection_note: null })
       .eq("id", sheet.id);
     setSaving(false);
     if (error) { showToast("Error al aprobar: " + error.message, "error"); return; }
@@ -118,20 +105,23 @@ export default function ApprovalDetailScreen({ sheet, user, onBack, onActionDone
     setSaving(true);
     const { error } = await supabase
       .from("weekly_sheets")
-      .update({
-        status: "draft",
-        rejection_note: rejectNote.trim() || null,
-        signed_at: null,
-        submitted_at: null,
-        signature: null,
-      })
+      .update({ status: "draft", rejection_note: rejectNote.trim() || null, signed_at: null, submitted_at: null, signature: null })
       .eq("id", sheet.id);
     setSaving(false);
     if (error) { showToast("Error al rechazar: " + error.message, "error"); return; }
     onActionDone();
   }
 
-  // ── Summary calculations ──────────────────────────────────────────────────
+  function handleExport() {
+    try {
+      exportSheetToExcel({ sheet, entries, members, projects, ownerName });
+      showToast("Excel descargado ✓");
+    } catch (e) {
+      showToast("Error al exportar: " + e.message, "error");
+    }
+  }
+
+  // ── Summary ──────────────────────────────────────────────────────────────────
   const summaryByEmployee = members.map((emp) => {
     const empEntries = entries.filter((e) => e.employee_id === emp.id);
     const ot = calcWeekOT(empEntries);
@@ -153,13 +143,7 @@ export default function ApprovalDetailScreen({ sheet, user, onBack, onActionDone
   const summaryByProject = Object.entries(projectMap).map(([pid, data]) => {
     const project = projects.find((p) => p.id === pid);
     const ot = calcWeekOT(data.entries);
-    return {
-      id: pid,
-      name: project ? project.name : "Sin proyecto",
-      number: project?.number || null,
-      employeeCount: data.employeeIds.size,
-      ...ot,
-    };
+    return { id: pid, name: project ? project.name : "Sin proyecto", number: project?.number || null, employeeCount: data.employeeIds.size, ...ot };
   }).sort((a, b) => b.total - a.total);
 
   const grandTotal = {
@@ -188,11 +172,7 @@ export default function ApprovalDetailScreen({ sheet, user, onBack, onActionDone
       <div style={s.header}>
         <button style={s.backBtn} onClick={onBack}>‹ Aprobaciones</button>
         <div style={s.headerRight}>
-          <span style={{
-            ...s.statusBadge,
-            background: isApproved ? "#dcfce7" : "#fef9c3",
-            color: isApproved ? "#166534" : "#92400e",
-          }}>
+          <span style={{ ...s.statusBadge, background: isApproved ? "#dcfce7" : "#fef9c3", color: isApproved ? "#166534" : "#92400e" }}>
             {isApproved ? "✅ Aprobada" : "⏳ Pendiente"}
           </span>
         </div>
@@ -201,13 +181,15 @@ export default function ApprovalDetailScreen({ sheet, user, onBack, onActionDone
       {/* Owner + week */}
       <div style={s.ownerCard}>
         <div style={s.ownerIcon}>{sheet.owner_type === "brigade" ? "🏗" : "👤"}</div>
-        <div>
+        <div style={{ flex: 1 }}>
           <div style={s.ownerName}>{ownerName}</div>
           <div style={s.ownerWeek}>{weekLabel}</div>
-          {sheet.signature && (
-            <div style={s.signedBy}>Firmada por {sheet.signature}</div>
-          )}
+          {sheet.signature && <div style={s.signedBy}>Firmada por {sheet.signature}</div>}
         </div>
+        {/* Export button */}
+        <button style={s.exportBtn} onClick={handleExport}>
+          📥 Excel
+        </button>
       </div>
 
       {/* Grand total */}
@@ -226,9 +208,7 @@ export default function ApprovalDetailScreen({ sheet, user, onBack, onActionDone
       <div style={s.card}>
         {summaryByEmployee.map((emp, i) => (
           <div key={emp.id} style={{ ...s.row, borderTop: i > 0 ? "1px solid #f3f4f6" : "none" }}>
-            <div style={s.avatar}>
-              {emp.full_name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
-            </div>
+            <div style={s.avatar}>{emp.full_name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}</div>
             <div style={s.rowInfo}>
               <div style={s.rowName}>{emp.full_name}</div>
               <div style={s.rowSub}>{emp.projectNames.join(" · ") || "Sin proyecto"}</div>
@@ -282,7 +262,6 @@ export default function ApprovalDetailScreen({ sheet, user, onBack, onActionDone
             return Object.entries(byDate).sort(([a], [b]) => a.localeCompare(b)).map(([date, dayEntries], i) => {
               const d = new Date(date + "T12:00:00");
               const dayName = DAYS_ES[d.getDay()];
-              const dayNum = d.getDate();
               const isSun = d.getDay() === 0;
               const dayHours = dayEntries.reduce((sum, e) =>
                 sum + (e.total_hours || calcHours(e.start_time, e.end_time, e.lunch_minutes)), 0);
@@ -290,7 +269,7 @@ export default function ApprovalDetailScreen({ sheet, user, onBack, onActionDone
                 <div key={date} style={{ ...s.dayRow, borderTop: i > 0 ? "1px solid #f3f4f6" : "none" }}>
                   <div style={s.dayLabel}>
                     <span style={{ ...s.dayName, color: isSun ? "#dc2626" : "#374151" }}>{dayName}</span>
-                    <span style={s.dayNum}>{dayNum}</span>
+                    <span style={s.dayNum}>{d.getDate()}</span>
                   </div>
                   <div style={s.dayEntries}>
                     {dayEntries.map((e, j) => {
@@ -299,9 +278,7 @@ export default function ApprovalDetailScreen({ sheet, user, onBack, onActionDone
                       return (
                         <div key={j} style={s.entryLine}>
                           <span style={s.entryTime}>
-                            {e.start_time && e.end_time
-                              ? `${e.start_time.slice(0, 5)} – ${e.end_time.slice(0, 5)}`
-                              : `${h.toFixed(1)}h`}
+                            {e.start_time && e.end_time ? `${e.start_time.slice(0, 5)} – ${e.end_time.slice(0, 5)}` : `${h.toFixed(1)}h`}
                           </span>
                           {proj && <span style={s.entryProj}>{proj.number || proj.name}</span>}
                         </div>
@@ -316,33 +293,25 @@ export default function ApprovalDetailScreen({ sheet, user, onBack, onActionDone
         )}
       </div>
 
-      {/* Action buttons — only for submitted sheets */}
+      {/* Action buttons */}
       {sheet.status === "submitted" && action === null && (
         <div style={s.actionRow}>
-          <button style={s.approveBtn} onClick={() => setAction("approve")}>
-            ✅ Aprobar
-          </button>
-          <button style={s.rejectBtn} onClick={() => setAction("reject")}>
-            ❌ Rechazar
-          </button>
+          <button style={s.approveBtn} onClick={() => setAction("approve")}>✅ Aprobar</button>
+          <button style={s.rejectBtn} onClick={() => setAction("reject")}>❌ Rechazar</button>
         </div>
       )}
 
-      {/* Approve confirm */}
       {action === "approve" && (
         <div style={s.confirmBox}>
           <p style={s.confirmTitle}>¿Confirmas la aprobación?</p>
           <p style={s.confirmDesc}>La hoja quedará aprobada y bloqueada para edición.</p>
           <div style={{ display: "flex", gap: "10px" }}>
-            <button style={s.confirmYes} onClick={handleApprove} disabled={saving}>
-              {saving ? "..." : "Sí, aprobar"}
-            </button>
+            <button style={s.confirmYes} onClick={handleApprove} disabled={saving}>{saving ? "..." : "Sí, aprobar"}</button>
             <button style={s.confirmNo} onClick={() => setAction(null)}>Cancelar</button>
           </div>
         </div>
       )}
 
-      {/* Reject form */}
       {action === "reject" && (
         <div style={s.confirmBox}>
           <p style={s.confirmTitle}>¿Rechazar esta hoja?</p>
@@ -355,15 +324,12 @@ export default function ApprovalDetailScreen({ sheet, user, onBack, onActionDone
             rows={3}
           />
           <div style={{ display: "flex", gap: "10px" }}>
-            <button style={s.rejectConfirmBtn} onClick={handleReject} disabled={saving}>
-              {saving ? "..." : "Sí, rechazar"}
-            </button>
+            <button style={s.rejectConfirmBtn} onClick={handleReject} disabled={saving}>{saving ? "..." : "Sí, rechazar"}</button>
             <button style={s.confirmNo} onClick={() => setAction(null)}>Cancelar</button>
           </div>
         </div>
       )}
 
-      {/* Approved info */}
       {isApproved && sheet.approved_at && (
         <div style={s.approvedBanner}>
           ✅ Aprobada el {new Date(sheet.approved_at).toLocaleDateString("es-PR", { month: "long", day: "numeric", year: "numeric" })}
@@ -388,6 +354,7 @@ const s = {
   ownerName: { fontSize: "16px", fontWeight: "600", color: "#111827" },
   ownerWeek: { fontSize: "13px", color: "#6b7280" },
   signedBy: { fontSize: "11px", color: "#9ca3af", marginTop: "2px" },
+  exportBtn: { background: "#f0fdf4", color: "#16a34a", border: "1px solid #86efac", borderRadius: "8px", padding: "8px 12px", fontSize: "13px", fontWeight: "600", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap", flexShrink: 0 },
   grandTotalCard: { background: "#1e40af", borderRadius: "16px", padding: "20px", marginBottom: "16px", textAlign: "center", color: "#fff" },
   grandTotalTitle: { fontSize: "12px", opacity: 0.8, marginBottom: "4px" },
   grandTotalHours: { fontSize: "40px", fontWeight: "700", margin: "0 0 8px" },
