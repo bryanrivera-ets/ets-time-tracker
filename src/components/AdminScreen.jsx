@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
 import BrigadesView from "./BrigadesView";
 import ProjectsView from "./ProjectsView";
+import ReportsView from "./ReportsView";
 
 const ROLES = ["approver", "pm", "supervisor", "employee"];
 
@@ -262,13 +263,16 @@ export default function AdminScreen({ user }) {
   if (activeSection === "proyectos") {
     return <ProjectsView onBack={() => setActiveSection(null)} user={user} />;
   }
+  if (activeSection === "reportes") {
+    return <ReportsView onBack={() => setActiveSection(null)} />;
+  }
 
   const adminTools = [
     { key: "empleados", title: "Empleados", desc: "Crear, editar y desactivar empleados", icon: "👥", color: "#2563eb", bg: "#dbeafe" },
     { key: "brigadas", title: "Brigadas", desc: "Modificar miembros y supervisores", icon: "🏗", color: "#ca8a04", bg: "#fef9c3" },
     { key: "proyectos", title: "Proyectos", desc: "Catálogo de proyectos activos", icon: "📋", color: "#16a34a", bg: "#dcfce7" },
     { key: "reset", title: "Reset de PIN", desc: "Restablecer PIN de empleados", icon: "🔑", color: "#dc2626", bg: "#fee2e2" },
-    { key: "reportes", title: "Reportes", desc: "Exportes y resúmenes para nómina", icon: "📊", color: "#7c3aed", bg: "#ede9fe" },
+    { key: "reportes", title: "Reportes", desc: "Dashboard de horas y OT", icon: "📊", color: "#7c3aed", bg: "#ede9fe" },
   ];
 
   return (
@@ -289,6 +293,7 @@ export default function AdminScreen({ user }) {
                 if (tool.key === "empleados") setActiveSection("empleados");
                 else if (tool.key === "brigadas") setActiveSection("brigadas");
                 else if (tool.key === "proyectos") setActiveSection("proyectos");
+                else if (tool.key === "reportes") setActiveSection("reportes");
                 else alert(`Próximamente: ${tool.title}`);
               }}
             >
