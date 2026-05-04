@@ -587,6 +587,70 @@ Sesión del 1 de mayo de 2026.
 - [ ] Evolución semanal de OT
 - [ ] Capacidad offline con sincronización
 
+## Fase 5 - Sesión 1: Dashboard de Reportes y Reset de PIN ✅
+
+Sesión del 4 de mayo de 2026.
+
+### Lo que se logró hoy:
+
+**ReportsView.jsx (archivo nuevo):**
+- [x] Dashboard accesible desde Admin → Reportes
+- [x] Librería recharts instalada (npm install recharts)
+- [x] 4 tarjetas resumen: Total horas, Total OT, Pendientes, Aprobadas
+- [x] Gráfica de barras horizontales: Horas por Proyecto (azul)
+- [x] Gráfica de barras horizontales: Horas por Empleado (verde)
+- [x] Gráfica de líneas: Evolución de horas por semana (Regular / OT×1.5 / OT×2)
+- [x] Período por defecto: últimas 4 semanas
+- [x] Tooltip personalizado en todas las gráficas
+- [x] Verificado en Vercel y en iPhone ✅
+
+**ResetPinView.jsx (archivo nuevo):**
+- [x] Pantalla dedicada de Reset de PIN desde Admin
+- [x] Lista separada: Con acceso a la app / Sin acceso
+- [x] Indicador de estado de PIN: "PIN personalizado" (verde) o "PIN = 0000" (amarillo)
+- [x] Búsqueda de empleados en tiempo real
+- [x] Botón Resetear con confirmación inline (Sí / No)
+- [x] Toast de confirmación al resetear
+
+**AdminScreen.jsx (actualizado):**
+- [x] Reset de PIN conectado a ResetPinView (ya no dice "Próximamente")
+- [x] Todas las 5 herramientas del Admin funcionando al 100%
+
+### Estado del proyecto:
+- Fase 1: Setup e Infraestructura       100% ✅
+- Fase 2: Auth y Catálogos              100% ✅
+- Fase 3: Captura de Horas              100% ✅
+- Fase 4: Firma y Aprobación            100% ✅
+- Fase 5: Reportes                      100% ✅
+- Fase 6: Piloto y Lanzamiento            0% ⏳
+
+### Archivos del proyecto al cierre de la sesión:
+- src/components/ReportsView.jsx — dashboard de reportes (nuevo)
+- src/components/ResetPinView.jsx — reset de PIN dedicado (nuevo)
+- src/components/AdminScreen.jsx — todas las herramientas conectadas
+- src/components/ApprovalsScreen.jsx
+- src/components/ApprovalDetailScreen.jsx
+- src/components/WeekSummaryScreen.jsx
+- src/components/BrigadeWeekScreen.jsx
+- src/components/PMWeekScreen.jsx
+- src/components/DayEntryModal.jsx
+- src/components/BrigadesView.jsx
+- src/components/ProjectsView.jsx
+- src/components/HomeScreen.jsx
+- src/components/LoginScreen.jsx
+- src/components/PinScreen.jsx
+- src/components/MyAccountScreen.jsx
+- src/components/ChangePinScreen.jsx
+- src/components/MainLayout.jsx
+- src/utils/exportToExcel.js
+
+### Pendientes Fase 6 (próxima sesión):
+- [ ] Definir brigada piloto y semana de inicio
+- [ ] Capacitación del equipo (supervisores, PMs, aprobadores)
+- [ ] Prueba con datos reales durante 1 semana
+- [ ] Recopilar feedback y ajustes finales
+- [ ] Go-live oficial con todas las brigadas
+
 Cuando empiece la Fase 2, usar este mensaje:
 
 > "Hola Claude. Retomo ETS Time Tracker. Ya completé la Fase 1 (setup, GitHub, Vercel, app corriendo). Ahora voy a empezar Fase 2: autenticación con PIN y catálogos. Por favor lee PROGRESO.md del proyecto para el contexto completo."
