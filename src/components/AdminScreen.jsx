@@ -3,6 +3,7 @@ import { supabase } from "../supabaseClient";
 import BrigadesView from "./BrigadesView";
 import ProjectsView from "./ProjectsView";
 import ReportsView from "./ReportsView";
+import ResetPinView from "./ResetPinView";
 
 const ROLES = ["approver", "pm", "supervisor", "employee"];
 
@@ -174,72 +175,45 @@ function EmployeeModal({ employee, onClose, onSaved, onError }) {
         </div>
         <div style={s.field}>
           <label style={s.label}>Nombre completo *</label>
-          <input
-            style={s.input}
-            value={form.full_name}
-            onChange={(e) => set("full_name", e.target.value)}
-            placeholder="Ej: Juan García"
-          />
+          <input style={s.input} value={form.full_name} onChange={(e) => set("full_name", e.target.value)} placeholder="Ej: Juan García" />
         </div>
         <div style={s.field}>
           <label style={s.label}>Rol</label>
           <select style={s.input} value={form.role} onChange={(e) => set("role", e.target.value)}>
-            {ROLES.map((r) => (
-              <option key={r} value={r}>{ROLE_LABELS[r]}</option>
-            ))}
+            {ROLES.map((r) => (<option key={r} value={r}>{ROLE_LABELS[r]}</option>))}
           </select>
         </div>
         <div style={s.field}>
           <label style={s.label}>Teléfono</label>
-          <input
-            style={s.input}
-            value={form.phone}
-            onChange={(e) => set("phone", e.target.value)}
-            placeholder="787-000-0000"
-            type="tel"
-          />
+          <input style={s.input} value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="787-000-0000" type="tel" />
         </div>
         <div style={s.toggleRow}>
           <span style={s.toggleLabel}>🔐 Acceso Admin</span>
-          <button
-            style={{ ...s.toggle, background: form.is_admin ? "#2563eb" : "#d1d5db" }}
-            onClick={() => set("is_admin", !form.is_admin)}
-          >
+          <button style={{ ...s.toggle, background: form.is_admin ? "#2563eb" : "#d1d5db" }} onClick={() => set("is_admin", !form.is_admin)}>
             <div style={{ ...s.toggleThumb, transform: form.is_admin ? "translateX(20px)" : "translateX(0)" }} />
           </button>
         </div>
         {!isNew && (
           <div style={s.toggleRow}>
             <span style={s.toggleLabel}>✅ Empleado activo</span>
-            <button
-              style={{ ...s.toggle, background: form.is_active ? "#16a34a" : "#d1d5db" }}
-              onClick={() => set("is_active", !form.is_active)}
-            >
+            <button style={{ ...s.toggle, background: form.is_active ? "#16a34a" : "#d1d5db" }} onClick={() => set("is_active", !form.is_active)}>
               <div style={{ ...s.toggleThumb, transform: form.is_active ? "translateX(20px)" : "translateX(0)" }} />
             </button>
           </div>
         )}
-        <button
-          style={{ ...s.saveBtn, opacity: saving ? 0.7 : 1 }}
-          onClick={handleSave}
-          disabled={saving}
-        >
+        <button style={{ ...s.saveBtn, opacity: saving ? 0.7 : 1 }} onClick={handleSave} disabled={saving}>
           {saving ? "Guardando..." : isNew ? "Crear Empleado" : "Guardar Cambios"}
         </button>
         {!isNew && (
           <div style={s.resetSection}>
             <div style={s.divider} />
             {!confirmReset ? (
-              <button style={s.resetBtn} onClick={() => setConfirmReset(true)}>
-                🔑 Resetear PIN a 0000
-              </button>
+              <button style={s.resetBtn} onClick={() => setConfirmReset(true)}>🔑 Resetear PIN a 0000</button>
             ) : (
               <div style={s.confirmBox}>
                 <p style={s.confirmText}>¿Seguro? El empleado tendrá que cambiar su PIN al entrar.</p>
                 <div style={{ display: "flex", gap: "8px" }}>
-                  <button style={s.confirmYes} onClick={handleResetPin} disabled={resetting}>
-                    {resetting ? "..." : "Sí, resetear"}
-                  </button>
+                  <button style={s.confirmYes} onClick={handleResetPin} disabled={resetting}>{resetting ? "..." : "Sí, resetear"}</button>
                   <button style={s.confirmNo} onClick={() => setConfirmReset(false)}>Cancelar</button>
                 </div>
               </div>
@@ -254,18 +228,11 @@ function EmployeeModal({ employee, onClose, onSaved, onError }) {
 export default function AdminScreen({ user }) {
   const [activeSection, setActiveSection] = useState(null);
 
-  if (activeSection === "empleados") {
-    return <EmployeesView onBack={() => setActiveSection(null)} />;
-  }
-  if (activeSection === "brigadas") {
-    return <BrigadesView onBack={() => setActiveSection(null)} />;
-  }
-  if (activeSection === "proyectos") {
-    return <ProjectsView onBack={() => setActiveSection(null)} user={user} />;
-  }
-  if (activeSection === "reportes") {
-    return <ReportsView onBack={() => setActiveSection(null)} />;
-  }
+  if (activeSection === "empleados") return <EmployeesView onBack={() => setActiveSection(null)} />;
+  if (activeSection === "brigadas") return <BrigadesView onBack={() => setActiveSection(null)} />;
+  if (activeSection === "proyectos") return <ProjectsView onBack={() => setActiveSection(null)} user={user} />;
+  if (activeSection === "reportes") return <ReportsView onBack={() => setActiveSection(null)} />;
+  if (activeSection === "reset") return <ResetPinView onBack={() => setActiveSection(null)} />;
 
   const adminTools = [
     { key: "empleados", title: "Empleados", desc: "Crear, editar y desactivar empleados", icon: "👥", color: "#2563eb", bg: "#dbeafe" },
@@ -289,13 +256,7 @@ export default function AdminScreen({ user }) {
             <button
               key={tool.key}
               style={s.toolCard}
-              onClick={() => {
-                if (tool.key === "empleados") setActiveSection("empleados");
-                else if (tool.key === "brigadas") setActiveSection("brigadas");
-                else if (tool.key === "proyectos") setActiveSection("proyectos");
-                else if (tool.key === "reportes") setActiveSection("reportes");
-                else alert(`Próximamente: ${tool.title}`);
-              }}
+              onClick={() => setActiveSection(tool.key)}
             >
               <div style={{ ...s.toolIcon, background: tool.bg, color: tool.color }}>{tool.icon}</div>
               <div style={s.toolText}>
