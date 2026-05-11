@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
 
 const ROLES = {
-  approver: { label: 'Aprobadores HR', short: 'Aprobador HR', color: '#16a34a', bg: '#dcfce7' },
-  pm: { label: 'Project Managers', short: 'Project Manager', color: '#ca8a04', bg: '#fef9c3' },
-  supervisor: { label: 'Supervisores', short: 'Supervisor', color: '#2563eb', bg: '#dbeafe' }
+  approver: { label: 'Aprobadores HR', short: 'Aprobador HR' },
+  pm: { label: 'Project Managers', short: 'Project Manager' },
+  supervisor: { label: 'Supervisores', short: 'Supervisor' }
 }
 
 const ROLE_ORDER = ['approver', 'pm', 'supervisor']
@@ -23,6 +23,8 @@ export default function LoginScreen({ onUserSelect }) {
   const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [selectedId, setSelectedId] = useState('')
+  const [step, setStep] = useState(1) // 1 = dropdown, 2 = PIN
 
   useEffect(() => {
     async function fetchUsers() {
@@ -33,7 +35,6 @@ export default function LoginScreen({ onUserSelect }) {
           .eq('is_active', true)
           .in('role', ['supervisor', 'pm', 'approver'])
           .order('full_name')
-
         if (error) throw error
         setEmployees(data || [])
       } catch (err) {
@@ -42,158 +43,420 @@ export default function LoginScreen({ onUserSelect }) {
         setLoading(false)
       }
     }
-
     fetchUsers()
   }, [])
+
+  const selectedUser = employees.find(e => e.id === selectedId)
 
   const groupedByRole = ROLE_ORDER.reduce((acc, roleKey) => {
     acc[roleKey] = employees.filter(e => e.role === roleKey)
     return acc
   }, {})
 
+  function handleContinue() {
+    if (!selectedUser) return
+    setStep(2)
+  }
+
+  function handleBack() {
+    setStep(1)
+  }
+
+  function handleUserConfirm() {
+    if (!selectedUser) return
+    onUserSelect(selectedUser)
+  }
+
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
-        <div style={styles.header}>
-          <div style={styles.logoCircle}>⏱</div>
-          <h1 style={styles.title}>ETS Time Tracker</h1>
-          <p style={styles.subtitle}>Caguas, Puerto Rico</p>
-          <div style={styles.divider}></div>
-          <p style={styles.stepLabel}>Paso 1 de 2 · Selecciona tu usuario</p>
+    <div style={s.page}>
+      {/* Background image overlay */}
+      <div style={s.bgImage} />
+      <div style={s.bgOverlay} />
+
+      {/* Card */}
+      <div style={s.card}>
+        {/* Logo + Title */}
+        <div style={s.header}>
+          <div style={s.logoBox}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
+          <h1 style={s.title}>ETS Time Tracker</h1>
+          <p style={s.subtitle}>CAGUAS, PUERTO RICO</p>
+          <div style={s.divider} />
         </div>
 
-        {loading && (
-          <p style={styles.loading}>Cargando usuarios...</p>
-        )}
+        {/* Step 1: Dropdown */}
+        {step === 1 && (
+          <div>
+            <p style={s.stepLabel}>PASO 1 DE 2 · SELECCIONA TU USUARIO</p>
 
-        {error && (
-          <div style={styles.errorBox}>
-            <strong>Error:</strong> {error}
-          </div>
-        )}
+            {loading && <p style={s.loadingText}>Cargando usuarios...</p>}
+            {error && <div style={s.errorBox}><strong>Error:</strong> {error}</div>}
 
-        {!loading && !error && (
-          <div style={styles.groupsContainer}>
-            {ROLE_ORDER.map(roleKey => {
-              const users = groupedByRole[roleKey]
-              if (users.length === 0) return null
-
-              return (
-                <div key={roleKey} style={styles.group}>
-                  <div style={styles.groupHeader}>
-                    {ROLES[roleKey].label}
-                  </div>
-                  <div style={styles.userList}>
-                    {users.map(user => (
-                      <button
-                        key={user.id}
-                        style={styles.userButton}
-                        onClick={() => onUserSelect(user)}
-                      >
-                        <div
-                          style={{
-                            ...styles.avatar,
-                            background: user.is_admin ? '#fef3c7' : ROLES[roleKey].bg,
-                            color: user.is_admin ? '#92400e' : ROLES[roleKey].color
-                          }}
-                        >
-                          {getInitials(user.full_name)}
-                        </div>
-                        <div style={styles.userInfo}>
-                          <div style={styles.userNameRow}>
-                            <span style={styles.userName}>{user.full_name}</span>
-                            {user.is_admin && (
-                              <span style={styles.adminBadge}>ADMIN</span>
-                            )}
-                          </div>
-                          <div style={styles.userRole}>
-                            {ROLES[roleKey].short}
-                          </div>
-                        </div>
-                        <span style={styles.arrow}>›</span>
-                      </button>
-                    ))}
-                  </div>
+            {!loading && !error && (
+              <>
+                <label style={s.label}>¿Quién eres?</label>
+                <div style={s.selectWrap}>
+                  <select
+                    style={s.select}
+                    value={selectedId}
+                    onChange={e => setSelectedId(e.target.value)}
+                  >
+                    <option value="">— Selecciona tu nombre —</option>
+                    {ROLE_ORDER.map(roleKey => {
+                      const users = groupedByRole[roleKey]
+                      if (!users.length) return null
+                      return (
+                        <optgroup key={roleKey} label={ROLES[roleKey].label}>
+                          {users.map(u => (
+                            <option key={u.id} value={u.id}>
+                              {u.full_name}{u.is_admin ? ' · Admin' : ''}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )
+                    })}
+                  </select>
+                  <svg style={s.chevron} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
                 </div>
-              )
-            })}
+
+                <button
+                  style={{ ...s.primaryBtn, opacity: selectedId ? 1 : 0.4, cursor: selectedId ? 'pointer' : 'default' }}
+                  onClick={handleContinue}
+                  disabled={!selectedId}
+                >
+                  Continuar
+                </button>
+              </>
+            )}
           </div>
         )}
 
-        <p style={styles.footer}>
-          Versión 0.0.3 · ETS Corporation
-        </p>
+        {/* Step 2: PIN via PinScreen */}
+        {step === 2 && selectedUser && (
+          <div>
+            <p style={s.stepLabel}>PASO 2 DE 2 · INGRESA TU PIN</p>
+
+            {/* User badge */}
+            <div style={s.userBadge}>
+              <div style={s.badgeAvatar}>
+                {getInitials(selectedUser.full_name)}
+              </div>
+              <div style={s.badgeInfo}>
+                <div style={s.badgeName}>{selectedUser.full_name}</div>
+                <div style={s.badgeRole}>
+                  {ROLES[selectedUser.role]?.short || selectedUser.role}
+                  {selectedUser.is_admin && <span style={s.adminBadge}>ADMIN</span>}
+                </div>
+              </div>
+              <button style={s.changeBtn} onClick={handleBack}>Cambiar</button>
+            </div>
+
+            {/* Trigger PinScreen flow */}
+            <PinPad user={selectedUser} onSuccess={handleUserConfirm} />
+          </div>
+        )}
+
+        <p style={s.footer}>Versión 1.0.1 · ETS Corporation</p>
       </div>
     </div>
   )
 }
 
-const styles = {
+// ─── Inline PIN pad (mirrors PinScreen but inline in card) ───────────────────
+function PinPad({ user, onSuccess }) {
+  const [pin, setPin] = useState('')
+  const [error, setError] = useState('')
+  const [checking, setChecking] = useState(false)
+
+  useEffect(() => {
+    if (pin.length === 4) validatePin()
+  }, [pin])
+
+  async function validatePin() {
+    setChecking(true)
+    setError('')
+    const { data, error: rpcError } = await supabase.rpc('validate_pin', {
+      employee_id: user.id,
+      pin_attempt: pin,
+    })
+    setChecking(false)
+    const isValid = !rpcError && data !== null &&
+      JSON.stringify(data).toLowerCase().includes('acceso correcto')
+    if (isValid) {
+      onSuccess()
+    } else {
+      setError('PIN incorrecto. Intenta de nuevo.')
+      setPin('')
+    }
+  }
+
+  function pressKey(k) {
+    if (checking) return
+    if (k === 'C') { setPin(''); setError(''); return }
+    if (k === 'DEL') { setPin(p => p.slice(0, -1)); return }
+    if (pin.length >= 4) return
+    setPin(p => p + k)
+  }
+
+  return (
+    <div>
+      {/* Dots */}
+      <div style={s.dotsRow}>
+        {[0,1,2,3].map(i => (
+          <div key={i} style={{
+            ...s.dot,
+            background: i < pin.length ? '#1e3a8a' : 'white',
+            borderColor: i < pin.length ? '#1e3a8a' : '#d1d5db',
+          }} />
+        ))}
+      </div>
+
+      {error && <p style={s.pinError}>{error}</p>}
+
+      {/* Keypad */}
+      <div style={s.keyGrid}>
+        {['1','2','3','4','5','6','7','8','9','C','0','DEL'].map(k => (
+          <button
+            key={k}
+            style={{
+              ...s.key,
+              color: k === 'C' ? '#dc2626' : '#111827',
+              fontSize: k === 'DEL' ? '18px' : '20px',
+            }}
+            onClick={() => pressKey(k)}
+            disabled={checking}
+          >
+            {k === 'DEL' ? '⌫' : k}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const s = {
   page: {
     minHeight: '100vh',
-    background: '#f9fafb',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    padding: '20px 12px',
     display: 'flex',
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'flex-start'
+    padding: '20px 12px',
+    position: 'relative',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    boxSizing: 'border-box',
   },
-  container: {
+  bgImage: {
+    position: 'fixed',
+    inset: 0,
+    backgroundImage: 'url("https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1400&q=80")',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    zIndex: 0,
+  },
+  bgOverlay: {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(10, 20, 50, 0.65)',
+    zIndex: 1,
+  },
+  card: {
+    position: 'relative',
+    zIndex: 2,
     width: '100%',
-    maxWidth: '420px',
-    background: '#ffffff',
+    maxWidth: '380px',
+    background: 'rgba(255,255,255,0.97)',
     borderRadius: '16px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)',
-    padding: '32px 20px',
-    boxSizing: 'border-box'
+    padding: '36px 28px 24px',
+    boxSizing: 'border-box',
+    boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
   },
   header: {
     textAlign: 'center',
-    marginBottom: '24px'
+    marginBottom: '20px',
   },
-  logoCircle: {
+  logoBox: {
     width: '56px',
     height: '56px',
+    background: '#1e3a8a',
     borderRadius: '14px',
-    background: '#dbeafe',
-    color: '#2563eb',
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '26px',
-    marginBottom: '12px'
+    marginBottom: '14px',
   },
   title: {
     fontSize: '22px',
-    fontWeight: '600',
+    fontWeight: '700',
+    color: '#111827',
     margin: '0 0 4px 0',
-    color: '#111827'
+    letterSpacing: '-0.3px',
   },
   subtitle: {
-    fontSize: '13px',
+    fontSize: '11px',
     color: '#6b7280',
     margin: '0 0 16px 0',
-    textTransform: 'uppercase',
-    letterSpacing: '0.4px'
+    letterSpacing: '0.08em',
   },
   divider: {
     height: '1px',
-    background: '#e5e7eb',
-    margin: '16px 0'
+    background: '#f3f4f6',
   },
   stepLabel: {
-    fontSize: '12px',
-    color: '#6b7280',
-    margin: '0',
+    fontSize: '11px',
+    fontWeight: '600',
+    color: '#9ca3af',
+    letterSpacing: '0.08em',
+    margin: '0 0 16px 0',
     textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-    fontWeight: '500'
   },
-  loading: {
+  label: {
+    display: 'block',
+    fontSize: '13px',
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: '6px',
+  },
+  selectWrap: {
+    position: 'relative',
+    marginBottom: '14px',
+  },
+  select: {
+    width: '100%',
+    padding: '11px 40px 11px 14px',
+    border: '1.5px solid #d1d5db',
+    borderRadius: '10px',
+    fontSize: '14px',
+    color: '#111827',
+    background: '#fff',
+    appearance: 'none',
+    cursor: 'pointer',
+    outline: 'none',
+    fontFamily: 'inherit',
+    boxSizing: 'border-box',
+  },
+  chevron: {
+    position: 'absolute',
+    right: '12px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    pointerEvents: 'none',
+  },
+  primaryBtn: {
+    width: '100%',
+    padding: '12px',
+    background: '#1e3a8a',
+    color: 'white',
+    border: 'none',
+    borderRadius: '10px',
+    fontSize: '14px',
+    fontWeight: '600',
+    fontFamily: 'inherit',
+    transition: 'opacity 0.2s',
+  },
+  userBadge: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    background: '#f0f4ff',
+    border: '1px solid #c7d2fe',
+    borderRadius: '10px',
+    padding: '10px 14px',
+    marginBottom: '18px',
+  },
+  badgeAvatar: {
+    width: '36px',
+    height: '36px',
+    borderRadius: '50%',
+    background: '#1e3a8a',
+    color: 'white',
+    fontSize: '13px',
+    fontWeight: '600',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  badgeInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  badgeName: {
+    fontSize: '13px',
+    fontWeight: '600',
+    color: '#1e3a8a',
+  },
+  badgeRole: {
+    fontSize: '11px',
+    color: '#6b7280',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    marginTop: '2px',
+  },
+  adminBadge: {
+    fontSize: '9px',
+    fontWeight: '700',
+    background: '#fef3c7',
+    color: '#92400e',
+    padding: '1px 6px',
+    borderRadius: '4px',
+  },
+  changeBtn: {
+    background: 'none',
+    border: 'none',
+    color: '#9ca3af',
+    fontSize: '12px',
+    cursor: 'pointer',
+    padding: '4px 8px',
+    borderRadius: '6px',
+    fontFamily: 'inherit',
+    flexShrink: 0,
+  },
+  dotsRow: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: '12px',
+    marginBottom: '14px',
+  },
+  dot: {
+    width: '14px',
+    height: '14px',
+    borderRadius: '50%',
+    border: '2px solid',
+    transition: 'background 0.15s, border-color 0.15s',
+  },
+  pinError: {
+    color: '#dc2626',
+    fontSize: '13px',
+    textAlign: 'center',
+    margin: '0 0 10px 0',
+  },
+  keyGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '8px',
+  },
+  key: {
+    padding: '14px',
+    border: '1.5px solid #e5e7eb',
+    borderRadius: '10px',
+    background: 'white',
+    fontWeight: '500',
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+  },
+  loadingText: {
     textAlign: 'center',
     color: '#6b7280',
     fontSize: '14px',
-    padding: '40px 0'
+    padding: '24px 0',
   },
   errorBox: {
     background: '#fee2e2',
@@ -201,95 +464,13 @@ const styles = {
     padding: '12px 14px',
     borderRadius: '8px',
     fontSize: '13px',
-    marginBottom: '16px'
-  },
-  groupsContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px'
-  },
-  group: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px'
-  },
-  groupHeader: {
-    fontSize: '11px',
-    fontWeight: '600',
-    color: '#6b7280',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-    paddingLeft: '4px'
-  },
-  userList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '6px'
-  },
-  userButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    padding: '12px 14px',
-    background: '#ffffff',
-    border: '1px solid #e5e7eb',
-    borderRadius: '12px',
-    cursor: 'pointer',
-    textAlign: 'left',
-    transition: 'all 0.15s',
-    fontFamily: 'inherit',
-    width: '100%'
-  },
-  avatar: {
-    width: '40px',
-    height: '40px',
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '13px',
-    fontWeight: '600',
-    flexShrink: 0
-  },
-  userInfo: {
-    flex: 1,
-    minWidth: 0
-  },
-  userNameRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    flexWrap: 'wrap'
-  },
-  userName: {
-    fontSize: '14px',
-    fontWeight: '500',
-    color: '#111827'
-  },
-  adminBadge: {
-    fontSize: '9px',
-    fontWeight: '700',
-    background: '#fef3c7',
-    color: '#92400e',
-    padding: '2px 7px',
-    borderRadius: '6px',
-    letterSpacing: '0.5px'
-  },
-  userRole: {
-    fontSize: '12px',
-    color: '#6b7280',
-    marginTop: '2px'
-  },
-  arrow: {
-    fontSize: '20px',
-    color: '#9ca3af',
-    fontWeight: '300'
+    marginBottom: '16px',
   },
   footer: {
     textAlign: 'center',
     fontSize: '11px',
     color: '#9ca3af',
-    marginTop: '24px',
-    marginBottom: '0'
-  }
+    marginTop: '20px',
+    marginBottom: 0,
+  },
 }
