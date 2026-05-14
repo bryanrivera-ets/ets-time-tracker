@@ -23,13 +23,44 @@ function toDateStr(date) {
   return date.toISOString().split("T")[0];
 }
 
+function calcHours(start, end, lunch) {
+  if (!start || !end) return 0;
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  const startMin = sh * 60 + sm;
+  const endMin = eh * 60 + em;
+  if (endMin <= startMin) return 0;
+  return Math.max(0, (endMin - startMin - (lunch || 0)) / 60);
+}
+
+function toMinutes(time) {
+  if (!time) return 0;
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function checkOverlaps(blocks) {
+  for (let i = 0; i < blocks.length; i++) {
+    for (let j = i + 1; j < blocks.length; j++) {
+      const aStart = toMinutes(blocks[i].start_time);
+      const aEnd = toMinutes(blocks[i].end_time);
+      const bStart = toMinutes(blocks[j].start_time);
+      const bEnd = toMinutes(blocks[j].end_time);
+      if (aStart < bEnd && bStart < aEnd) {
+        return `El Bloque ${i + 1} (${blocks[i].start_time}–${blocks[i].end_time}) se solapa con el Bloque ${j + 1} (${blocks[j].start_time}–${blocks[j].end_time}).`;
+      }
+    }
+  }
+  return null;
+}
+
 function calcWeekOT(entries) {
   let regular = 0, ot15 = 0, ot2 = 0;
   let weeklyRegularBank = 0;
   const sorted = [...entries].sort((a, b) => a.work_date.localeCompare(b.work_date));
   for (const entry of sorted) {
     const isSunday = new Date(entry.work_date + "T12:00:00").getDay() === 0;
-    const hours = entry.total_hours || 0;
+    const hours = calcHours(entry.start_time, entry.end_time, entry.lunch_minutes);
     if (isSunday) {
       ot2 += hours;
     } else {
@@ -44,19 +75,100 @@ function calcWeekOT(entries) {
   return { regular, ot15, ot2, total: regular + ot15 + ot2 };
 }
 
-// ─── Day Entry Modal for PM ────────────────────────────────────────────────────
+// ─── TimeInput sub-component ──────────────────────────────────────────────────
+function TimeInput({ label, value, onChange }) {
+  return (
+    <div style={s.timeField}>
+      <label style={s.label}>{label}</label>
+      <input
+        type="time"
+        style={s.timeInput}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+}
+
+// ─── EntryBlock sub-component (same as supervisors) ───────────────────────────
+function EntryBlock({ block, index, projects, onChange, onRemove, canRemove }) {
+  const hours = calcHours(block.start_time, block.end_time, block.lunch_minutes);
+
+  return (
+    <div style={s.entryBlock}>
+      <div style={s.entryBlockHeader}>
+        <span style={s.entryBlockTitle}>Bloque {index + 1}</span>
+        {canRemove && (
+          <button style={s.removeBlockBtn} onClick={onRemove}>✕ Eliminar</button>
+        )}
+      </div>
+
+      <div style={s.timeRow}>
+        <TimeInput label="Entrada" value={block.start_time} onChange={(v) => onChange("start_time", v)} />
+        <TimeInput label="Salida" value={block.end_time} onChange={(v) => onChange("end_time", v)} />
+      </div>
+
+      <div style={s.lunchRow}>
+        <label style={s.label}>Almuerzo</label>
+        <div style={s.lunchBtns}>
+          {[0, 60].map((min) => (
+            <button
+              key={min}
+              style={{
+                ...s.lunchBtn,
+                background: block.lunch_minutes === min ? "#2563eb" : "#f3f4f6",
+                color: block.lunch_minutes === min ? "#fff" : "#374151",
+              }}
+              onClick={() => onChange("lunch_minutes", min)}
+            >
+              {min === 0 ? "Sin almuerzo" : `${min} min`}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={s.projectField}>
+        <label style={s.label}>Proyecto</label>
+        <select
+          style={s.select}
+          value={block.project_id}
+          onChange={(e) => onChange("project_id", e.target.value)}
+        >
+          <option value="">— Sin proyecto —</option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.number ? `${p.number} · ` : ""}{p.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {hours > 0 && (
+        <div style={s.hoursPreview}>
+          ⏱ {hours.toFixed(2)} horas netas
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── PM Day Modal (now uses entrada/salida like supervisors) ──────────────────
 function PMDayModal({ date, dayIndex, existingEntries, sheetId, pmId, projects, onClose, onSaved, onError }) {
   const isSunday = dayIndex === 6;
+
   const [blocks, setBlocks] = useState(() => {
     if (existingEntries && existingEntries.length > 0) {
       return existingEntries.map((e) => ({
         id: e.id,
-        total_hours: e.total_hours || 0,
+        start_time: e.start_time || "",
+        end_time: e.end_time || "",
+        lunch_minutes: e.lunch_minutes ?? 60,
         project_id: e.project_id || "",
       }));
     }
-    return [{ id: null, total_hours: 8, project_id: "" }];
+    return [{ id: null, start_time: "07:00", end_time: "16:00", lunch_minutes: 60, project_id: "" }];
   });
+
   const [saving, setSaving] = useState(false);
 
   function updateBlock(index, field, value) {
@@ -64,40 +176,51 @@ function PMDayModal({ date, dayIndex, existingEntries, sheetId, pmId, projects, 
   }
 
   function addBlock() {
-    setBlocks((prev) => [...prev, { id: null, total_hours: 0, project_id: "" }]);
+    const last = blocks[blocks.length - 1];
+    setBlocks((prev) => [...prev, {
+      id: null,
+      start_time: last?.end_time || "13:00",
+      end_time: "17:00",
+      lunch_minutes: 0,
+      project_id: last?.project_id || "",
+    }]);
   }
 
   function removeBlock(index) {
     setBlocks((prev) => prev.filter((_, i) => i !== index));
   }
 
-  const totalHours = blocks.reduce((sum, b) => sum + (parseFloat(b.total_hours) || 0), 0);
+  const totalHours = blocks.reduce((sum, b) => sum + calcHours(b.start_time, b.end_time, b.lunch_minutes), 0);
 
   async function handleSave() {
     for (let i = 0; i < blocks.length; i++) {
-      const h = parseFloat(blocks[i].total_hours);
-      if (!h || h <= 0) { onError(`Bloque ${i + 1}: ingresa horas válidas.`); return; }
-      if (h > 24) { onError(`Bloque ${i + 1}: no puede ser más de 24 horas.`); return; }
+      const b = blocks[i];
+      if (!b.start_time || !b.end_time) { onError(`Bloque ${i + 1}: entrada y salida son requeridas.`); return; }
+      const h = calcHours(b.start_time, b.end_time, b.lunch_minutes);
+      if (h <= 0) { onError(`Bloque ${i + 1}: la salida debe ser después de la entrada.`); return; }
     }
+
+    if (blocks.length > 1) {
+      const overlapError = checkOverlaps(blocks);
+      if (overlapError) { onError(overlapError); return; }
+    }
+
     setSaving(true);
 
-    // Delete existing
     const existingIds = existingEntries.map((e) => e.id).filter(Boolean);
     if (existingIds.length > 0) {
       await supabase.from("time_entries").delete().in("id", existingIds);
     }
 
-    // Insert new blocks
     const toInsert = blocks.map((b) => ({
       sheet_id: sheetId,
       employee_id: pmId,
       work_date: date,
-      total_hours: parseFloat(b.total_hours) || 0,
+      start_time: b.start_time,
+      end_time: b.end_time,
+      lunch_minutes: b.lunch_minutes,
       project_id: b.project_id || null,
-      // PMs don't use start/end time
-      start_time: null,
-      end_time: null,
-      lunch_minutes: 0,
+      total_hours: calcHours(b.start_time, b.end_time, b.lunch_minutes),
     }));
 
     const { error } = await supabase.from("time_entries").insert(toInsert);
@@ -135,83 +258,26 @@ function PMDayModal({ date, dayIndex, existingEntries, sheetId, pmId, projects, 
 
         <div style={s.blocksContainer}>
           {blocks.map((block, i) => (
-            <div key={i} style={s.entryBlock}>
-              <div style={s.blockHeader}>
-                <span style={s.blockTitle}>Bloque {i + 1}</span>
-                {blocks.length > 1 && (
-                  <button style={s.removeBtn} onClick={() => removeBlock(i)}>✕ Eliminar</button>
-                )}
-              </div>
-
-              <div style={s.hoursRow}>
-                <div style={s.hoursField}>
-                  <label style={s.label}>Horas trabajadas</label>
-                  <div style={s.hoursInputRow}>
-                    <button
-                      style={s.hoursBtn}
-                      onClick={() => updateBlock(i, "total_hours", Math.max(0, (parseFloat(block.total_hours) || 0) - 0.5))}
-                    >−</button>
-                    <input
-                      style={s.hoursInput}
-                      type="number"
-                      min="0"
-                      max="24"
-                      step="0.5"
-                      value={block.total_hours}
-                      onChange={(e) => updateBlock(i, "total_hours", e.target.value)}
-                    />
-                    <button
-                      style={s.hoursBtn}
-                      onClick={() => updateBlock(i, "total_hours", Math.min(24, (parseFloat(block.total_hours) || 0) + 0.5))}
-                    >+</button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick hour buttons */}
-              <div style={s.quickBtns}>
-                {[4, 6, 8, 10, 12].map((h) => (
-                  <button
-                    key={h}
-                    style={{
-                      ...s.quickBtn,
-                      background: parseFloat(block.total_hours) === h ? "#2563eb" : "#f3f4f6",
-                      color: parseFloat(block.total_hours) === h ? "#fff" : "#374151",
-                    }}
-                    onClick={() => updateBlock(i, "total_hours", h)}
-                  >
-                    {h}h
-                  </button>
-                ))}
-              </div>
-
-              <div style={s.projectField}>
-                <label style={s.label}>Proyecto</label>
-                <select
-                  style={s.select}
-                  value={block.project_id}
-                  onChange={(e) => updateBlock(i, "project_id", e.target.value)}
-                >
-                  <option value="">— Sin proyecto —</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.number ? `${p.number} · ` : ""}{p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            <EntryBlock
+              key={i}
+              block={block}
+              index={i}
+              projects={projects}
+              onChange={(field, value) => updateBlock(i, field, value)}
+              onRemove={() => removeBlock(i)}
+              canRemove={blocks.length > 1}
+            />
           ))}
         </div>
 
         <button style={s.addBlockBtn} onClick={addBlock}>
-          + Agregar otro proyecto
+          + Agregar bloque de horas
         </button>
 
         {totalHours > 0 && (
           <div style={s.totalRow}>
             <span style={s.totalLabel}>Total del día:</span>
-            <span style={s.totalHours}>{totalHours.toFixed(1)} horas</span>
+            <span style={s.totalHours}>{totalHours.toFixed(2)} horas</span>
             {isSunday && <span style={s.sundayNote}>(todas OT×2)</span>}
           </div>
         )}
@@ -302,7 +368,8 @@ export default function PMWeekScreen({ user }) {
   }
 
   function getHoursForDay(dayIndex) {
-    return getEntriesForDay(dayIndex).reduce((sum, e) => sum + (e.total_hours || 0), 0);
+    return getEntriesForDay(dayIndex).reduce((sum, e) =>
+      sum + calcHours(e.start_time, e.end_time, e.lunch_minutes), 0);
   }
 
   const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -310,23 +377,16 @@ export default function PMWeekScreen({ user }) {
   const isCurrentWeek = toDateStr(weekStart) === toDateStr(getWeekStart());
   const otInfo = calcWeekOT(entries);
 
-  // Fake "members" array for WeekSummaryScreen compatibility
-  const fakeMember = [{ id: user.id, full_name: user.full_name }];
-  const fakeEntries = entries.map((e) => ({
-    ...e,
-    // WeekSummaryScreen uses start_time/end_time — map total_hours for OT calc
-    start_time: "07:00",
-    end_time: e.total_hours ? `${String(7 + Math.floor(e.total_hours)).padStart(2, "0")}:${String(Math.round((e.total_hours % 1) * 60)).padStart(2, "0")}` : "07:00",
-    lunch_minutes: 0,
-  }));
+  // Pass the PM as the single "member" to WeekSummaryScreen
+  const pmAsMember = [{ id: user.id, full_name: user.full_name }];
 
   if (showSummary) {
     return (
       <WeekSummaryScreen
         user={user}
         sheet={sheet}
-        entries={fakeEntries}
-        members={fakeMember}
+        entries={entries}
+        members={pmAsMember}
         projects={projects}
         onBack={() => setShowSummary(false)}
         onSigned={() => { setShowSummary(false); fetchAll(); showToast("Hoja firmada y enviada ✓"); }}
@@ -365,7 +425,6 @@ export default function PMWeekScreen({ user }) {
           <button style={s.navBtn} onClick={() => setWeekStart(addDays(weekStart, 7))}>›</button>
         </div>
 
-        {/* OT summary */}
         {otInfo.total > 0 && (
           <div style={s.otSummary}>
             <span style={s.otReg}>{otInfo.regular.toFixed(1)}h reg</span>
@@ -492,19 +551,19 @@ const s = {
   closeBtn: { background: "none", border: "none", fontSize: "20px", color: "#6b7280", cursor: "pointer", padding: "4px" },
   blocksContainer: { display: "flex", flexDirection: "column", gap: "12px", marginBottom: "12px" },
   entryBlock: { background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "12px", padding: "14px" },
-  blockHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" },
-  blockTitle: { fontSize: "13px", fontWeight: "600", color: "#374151" },
-  removeBtn: { fontSize: "12px", color: "#dc2626", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" },
-  hoursRow: { marginBottom: "10px" },
-  hoursField: { flex: 1 },
-  label: { display: "block", fontSize: "11px", fontWeight: "500", color: "#6b7280", marginBottom: "6px" },
-  hoursInputRow: { display: "flex", alignItems: "center", gap: "8px" },
-  hoursBtn: { width: "40px", height: "40px", borderRadius: "10px", border: "1px solid #d1d5db", background: "#fff", fontSize: "20px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "inherit", color: "#374151" },
-  hoursInput: { flex: 1, padding: "9px", border: "1px solid #d1d5db", borderRadius: "10px", fontSize: "18px", fontWeight: "700", textAlign: "center", fontFamily: "inherit", outline: "none" },
-  quickBtns: { display: "flex", gap: "6px", marginBottom: "12px", flexWrap: "wrap" },
-  quickBtn: { flex: 1, minWidth: "40px", padding: "7px 4px", border: "none", borderRadius: "8px", fontSize: "12px", fontWeight: "500", cursor: "pointer", fontFamily: "inherit" },
-  projectField: { },
+  entryBlockHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" },
+  entryBlockTitle: { fontSize: "13px", fontWeight: "600", color: "#374151" },
+  removeBlockBtn: { fontSize: "12px", color: "#dc2626", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" },
+  timeRow: { display: "flex", gap: "10px", marginBottom: "12px" },
+  timeField: { flex: 1 },
+  label: { display: "block", fontSize: "11px", fontWeight: "500", color: "#6b7280", marginBottom: "4px" },
+  timeInput: { width: "100%", padding: "9px 10px", border: "1px solid #d1d5db", borderRadius: "8px", fontSize: "15px", fontFamily: "inherit", boxSizing: "border-box", outline: "none", background: "#fff" },
+  lunchRow: { marginBottom: "12px" },
+  lunchBtns: { display: "flex", gap: "6px", marginTop: "4px" },
+  lunchBtn: { flex: 1, padding: "9px 4px", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: "500", cursor: "pointer", fontFamily: "inherit" },
+  projectField: { marginBottom: "8px" },
   select: { width: "100%", padding: "9px 10px", border: "1px solid #d1d5db", borderRadius: "8px", fontSize: "14px", fontFamily: "inherit", background: "#fff", outline: "none" },
+  hoursPreview: { fontSize: "12px", color: "#16a34a", fontWeight: "500", textAlign: "right" },
   addBlockBtn: { width: "100%", padding: "11px", background: "#f0fdf4", color: "#16a34a", border: "1px dashed #86efac", borderRadius: "10px", fontSize: "14px", fontWeight: "500", cursor: "pointer", fontFamily: "inherit", marginBottom: "14px" },
   totalRow: { display: "flex", alignItems: "center", gap: "8px", background: "#f0fdf4", borderRadius: "10px", padding: "10px 14px", marginBottom: "14px" },
   totalLabel: { fontSize: "13px", color: "#374151", flex: 1 },

@@ -66,7 +66,7 @@ function EntryBlock({ block, index, projects, onChange, onRemove, canRemove }) {
       <div style={s.lunchRow}>
         <label style={s.label}>Almuerzo</label>
         <div style={s.lunchBtns}>
-          {[0, 30, 60].map((min) => (
+          {[0, 60].map((min) => (
             <button
               key={min}
               style={{
@@ -116,11 +116,11 @@ export default function DayEntryModal({ employee, date, dayIndex, existingEntrie
         id: e.id,
         start_time: e.start_time || "",
         end_time: e.end_time || "",
-        lunch_minutes: e.lunch_minutes ?? 30,
+        lunch_minutes: e.lunch_minutes ?? 60,
         project_id: e.project_id || "",
       }));
     }
-    return [{ id: null, start_time: "07:00", end_time: "15:30", lunch_minutes: 30, project_id: "" }];
+    return [{ id: null, start_time: "07:00", end_time: "16:00", lunch_minutes: 60, project_id: "" }];
   });
 
   const [saving, setSaving] = useState(false);
@@ -147,7 +147,6 @@ export default function DayEntryModal({ employee, date, dayIndex, existingEntrie
   const totalHours = blocks.reduce((sum, b) => sum + calcHours(b.start_time, b.end_time, b.lunch_minutes), 0);
 
   async function handleSave() {
-    // Validate individual blocks
     for (let i = 0; i < blocks.length; i++) {
       const b = blocks[i];
       if (!b.start_time || !b.end_time) { onError(`Bloque ${i + 1}: entrada y salida son requeridas.`); return; }
@@ -155,7 +154,6 @@ export default function DayEntryModal({ employee, date, dayIndex, existingEntrie
       if (h <= 0) { onError(`Bloque ${i + 1}: la salida debe ser después de la entrada.`); return; }
     }
 
-    // ✅ Validate overlaps between blocks
     if (blocks.length > 1) {
       const overlapError = checkOverlaps(blocks);
       if (overlapError) { onError(overlapError); return; }
@@ -274,7 +272,7 @@ const s = {
   timeInput: { width: "100%", padding: "9px 10px", border: "1px solid #d1d5db", borderRadius: "8px", fontSize: "15px", fontFamily: "inherit", boxSizing: "border-box", outline: "none", background: "#fff" },
   lunchRow: { marginBottom: "12px" },
   lunchBtns: { display: "flex", gap: "6px", marginTop: "4px" },
-  lunchBtn: { flex: 1, padding: "7px 4px", border: "none", borderRadius: "8px", fontSize: "12px", fontWeight: "500", cursor: "pointer", fontFamily: "inherit" },
+  lunchBtn: { flex: 1, padding: "9px 4px", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: "500", cursor: "pointer", fontFamily: "inherit" },
   projectField: { marginBottom: "8px" },
   select: { width: "100%", padding: "9px 10px", border: "1px solid #d1d5db", borderRadius: "8px", fontSize: "14px", fontFamily: "inherit", background: "#fff", outline: "none" },
   hoursPreview: { fontSize: "12px", color: "#16a34a", fontWeight: "500", textAlign: "right" },
