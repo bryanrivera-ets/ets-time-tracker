@@ -88,13 +88,13 @@ const styles = {
   layout: {
     minHeight: '100vh',
     background: '#f9fafb',
-    paddingBottom: '80px',
+    paddingBottom: 'calc(80px + env(safe-area-inset-bottom))',
     position: 'relative'
   },
   header: {
     background: '#ffffff',
     borderBottom: '1px solid #e5e7eb',
-    padding: '14px 16px',
+    padding: 'calc(14px + env(safe-area-inset-top)) 16px 14px',
     position: 'sticky',
     top: 0,
     zIndex: 10
@@ -139,7 +139,8 @@ const styles = {
     background: '#ffffff',
     borderTop: '1px solid #e5e7eb',
     boxShadow: '0 -1px 3px rgba(0,0,0,0.04)',
-    zIndex: 10
+    zIndex: 10,
+    paddingBottom: 'env(safe-area-inset-bottom)'
   },
   tabBarInner: {
     maxWidth: '420px',
