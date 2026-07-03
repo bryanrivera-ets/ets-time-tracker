@@ -109,3 +109,23 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+/* ─── Fix iOS Safari: time inputs y selects que se ven en blanco ─── */
+input[type="time"] {
+  -webkit-appearance: none;
+  appearance: none;
+  color: #111827 !important;
+  min-height: 40px;
+}
+
+input[type="time"]::-webkit-date-and-time-value {
+  text-align: left;
+  color: #111827;
+  margin: 0;
+}
+
+select {
+  -webkit-appearance: none;
+  appearance: none;
+  color: #111827 !important;
+}
