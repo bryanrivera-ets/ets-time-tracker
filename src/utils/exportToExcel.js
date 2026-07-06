@@ -33,16 +33,10 @@ function calcWeekOT(entries) {
   return { regular, ot15, ot2, total: regular + ot15 + ot2 };
 }
 
-function formatDate(dateStr) {
-  if (!dateStr) return "";
-  const d = new Date(dateStr + "T12:00:00");
-  return d.toLocaleDateString("es-PR", { weekday: "short", year: "numeric", month: "short", day: "numeric" });
-}
-
 /**
  * Export a weekly sheet to Excel with two sheets:
- * - "Resumen" — one row per employee with totals
- * - "Detalle" — one row per day per employee
+ * - "Resumen" — one row per employee with totals (Total por empleado y fila TOTAL con fórmulas)
+ * - "Detalle" — one row per day per employee (Horas Netas con fórmula)
  *
  * @param {object} params
  * @param {object} params.sheet - weekly_sheet record
@@ -82,32 +76,32 @@ export function exportSheetToExcel({ sheet, entries, members, projects, ownerNam
       +ot.regular.toFixed(2),
       +ot.ot15.toFixed(2),
       +ot.ot2.toFixed(2),
-      +ot.total.toFixed(2),
+      +ot.total.toFixed(2), // se reemplaza por fórmula abajo
       projectNames,
     ];
   });
 
-  // Totals row
-  const totals = members.reduce((acc, emp) => {
-    const empEntries = entries.filter((e) => e.employee_id === emp.id);
-    const ot = calcWeekOT(empEntries);
-    acc.regular += ot.regular;
-    acc.ot15 += ot.ot15;
-    acc.ot2 += ot.ot2;
-    acc.total += ot.total;
-    return acc;
-  }, { regular: 0, ot15: 0, ot2: 0, total: 0 });
-
-  resumenRows.push([
-    "TOTAL",
-    +totals.regular.toFixed(2),
-    +totals.ot15.toFixed(2),
-    +totals.ot2.toFixed(2),
-    +totals.total.toFixed(2),
-    "",
-  ]);
+  // Totals row (los valores se reemplazan por fórmulas SUM abajo)
+  resumenRows.push(["TOTAL", 0, 0, 0, 0, ""]);
 
   const wsResumen = XLSX.utils.aoa_to_sheet([...resumenHeader, ...resumenRows]);
+
+  // ── Fórmulas en Resumen ──
+  // Los datos de empleados empiezan en la fila 8 (1-indexed) — header ocupa filas 1-7
+  const firstDataRow = 8;
+  const lastDataRow = firstDataRow + members.length - 1; // última fila de empleado
+  const totalRow = lastDataRow + 1;                       // fila TOTAL
+
+  // Total Horas por empleado = Regular + OT1.5 + OT2 (columna E = B+C+D)
+  for (let r = firstDataRow; r <= lastDataRow; r++) {
+    wsResumen[`E${r}`] = { t: "n", f: `SUM(B${r}:D${r})`, z: "0.00" };
+  }
+
+  // Fila TOTAL: suma de cada columna
+  wsResumen[`B${totalRow}`] = { t: "n", f: `SUM(B${firstDataRow}:B${lastDataRow})`, z: "0.00" };
+  wsResumen[`C${totalRow}`] = { t: "n", f: `SUM(C${firstDataRow}:C${lastDataRow})`, z: "0.00" };
+  wsResumen[`D${totalRow}`] = { t: "n", f: `SUM(D${firstDataRow}:D${lastDataRow})`, z: "0.00" };
+  wsResumen[`E${totalRow}`] = { t: "n", f: `SUM(E${firstDataRow}:E${lastDataRow})`, z: "0.00" };
 
   // Column widths for Resumen
   wsResumen["!cols"] = [
@@ -144,12 +138,31 @@ export function exportSheetToExcel({ sheet, entries, members, projects, ownerNam
       entry.start_time ? entry.start_time.slice(0, 5) : "—",
       entry.end_time ? entry.end_time.slice(0, 5) : "—",
       entry.lunch_minutes ?? 0,
-      +hours.toFixed(2),
+      +hours.toFixed(2), // fallback; se reemplaza por fórmula si hay entrada/salida
       proj ? (proj.number ? `${proj.number} - ${proj.name}` : proj.name) : "Sin proyecto",
     ]);
   }
 
   const wsDetalle = XLSX.utils.aoa_to_sheet([...detalleHeader, ...detalleRows]);
+
+  // ── Fórmulas en Detalle ──
+  // Los datos empiezan en la fila 6 (1-indexed) — header ocupa filas 1-5
+  // Columnas: D=Entrada, E=Salida, F=Almuerzo(min), G=Horas Netas
+  // Fórmula: (Salida − Entrada) en horas − Almuerzo/60, nunca negativo
+  const detalleFirstRow = 6;
+  detalleRows.forEach((row, i) => {
+    const r = detalleFirstRow + i;
+    const hasTimes = row[3] !== "—" && row[4] !== "—";
+    if (hasTimes) {
+      wsDetalle[`G${r}`] = {
+        t: "n",
+        f: `MAX(0,ROUND((TIMEVALUE(E${r})-TIMEVALUE(D${r}))*24-F${r}/60,2))`,
+        z: "0.00",
+      };
+    }
+    // Si no hay entrada/salida (registros viejos de PM con solo total),
+    // se queda el valor estático que ya está en la celda.
+  });
 
   // Column widths for Detalle
   wsDetalle["!cols"] = [
