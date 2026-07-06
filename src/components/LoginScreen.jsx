@@ -77,12 +77,7 @@ export default function LoginScreen({ onUserSelect }) {
       <div style={s.card}>
         {/* Logo + Title */}
         <div style={s.header}>
-          <div style={s.logoBox}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12 6 12 12 16 14"/>
-            </svg>
-          </div>
+          <img src="/ets-logo.png" alt="ETS - Epoxy Technologies Systems" style={s.logoImg} />
           <h1 style={s.title}>ETS Time Tracker</h1>
           <p style={s.subtitle}>CAGUAS, PUERTO RICO</p>
           <div style={s.divider} />
@@ -137,7 +132,7 @@ export default function LoginScreen({ onUserSelect }) {
           </div>
         )}
 
-        {/* Step 2: PIN via PinScreen */}
+        {/* Step 2: PIN */}
         {step === 2 && selectedUser && (
           <div>
             <p style={s.stepLabel}>PASO 2 DE 2 · INGRESA TU PIN</p>
@@ -157,7 +152,7 @@ export default function LoginScreen({ onUserSelect }) {
               <button style={s.changeBtn} onClick={handleBack}>Cambiar</button>
             </div>
 
-            {/* Trigger PinScreen flow */}
+            {/* PIN pad */}
             <PinPad user={selectedUser} onSuccess={handleUserConfirm} />
           </div>
         )}
@@ -168,7 +163,7 @@ export default function LoginScreen({ onUserSelect }) {
   )
 }
 
-// ─── Inline PIN pad (mirrors PinScreen but inline in card) ───────────────────
+// ─── Inline PIN pad ───────────────────────────────────────────────────────────
 function PinPad({ user, onSuccess }) {
   const [pin, setPin] = useState('')
   const [error, setError] = useState('')
@@ -281,15 +276,11 @@ const s = {
     textAlign: 'center',
     marginBottom: '20px',
   },
-  logoBox: {
-    width: '56px',
-    height: '56px',
-    background: '#1e3a8a',
-    borderRadius: '14px',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: '14px',
+  logoImg: {
+    width: '200px',
+    maxWidth: '80%',
+    height: 'auto',
+    marginBottom: '16px',
   },
   title: {
     fontSize: '22px',
