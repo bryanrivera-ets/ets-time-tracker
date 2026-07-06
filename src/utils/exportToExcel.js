@@ -10,6 +10,13 @@ function calcHours(start, end, lunch) {
   return Math.max(0, (endMin - startMin - (lunch || 0)) / 60);
 }
 
+// Convierte "HH:MM" a fracción de día de Excel (ej: 12:00 → 0.5)
+function timeToExcel(timeStr) {
+  if (!timeStr) return null;
+  const [h, m] = timeStr.split(":").map(Number);
+  return (h * 60 + m) / 1440;
+}
+
 function calcWeekOT(entries) {
   let regular = 0, ot15 = 0, ot2 = 0;
   let weeklyRegularBank = 0;
@@ -36,7 +43,8 @@ function calcWeekOT(entries) {
 /**
  * Export a weekly sheet to Excel with two sheets:
  * - "Resumen" — one row per employee with totals (Total por empleado y fila TOTAL con fórmulas)
- * - "Detalle" — one row per day per employee (Horas Netas con fórmula)
+ * - "Detalle" — one row per day per employee (Entrada/Salida como horas nativas de Excel,
+ *   Horas Netas con fórmula editable)
  *
  * @param {object} params
  * @param {object} params.sheet - weekly_sheet record
@@ -135,8 +143,8 @@ export function exportSheetToExcel({ sheet, entries, members, projects, ownerNam
       emp?.full_name || "Desconocido",
       entry.work_date,
       dayNames[d.getDay()],
-      entry.start_time ? entry.start_time.slice(0, 5) : "—",
-      entry.end_time ? entry.end_time.slice(0, 5) : "—",
+      entry.start_time ? entry.start_time.slice(0, 5) : "—", // se reemplaza por hora nativa abajo
+      entry.end_time ? entry.end_time.slice(0, 5) : "—",     // se reemplaza por hora nativa abajo
       entry.lunch_minutes ?? 0,
       +hours.toFixed(2), // fallback; se reemplaza por fórmula si hay entrada/salida
       proj ? (proj.number ? `${proj.number} - ${proj.name}` : proj.name) : "Sin proyecto",
@@ -145,23 +153,28 @@ export function exportSheetToExcel({ sheet, entries, members, projects, ownerNam
 
   const wsDetalle = XLSX.utils.aoa_to_sheet([...detalleHeader, ...detalleRows]);
 
-  // ── Fórmulas en Detalle ──
+  // ── Horas nativas + fórmulas en Detalle ──
   // Los datos empiezan en la fila 6 (1-indexed) — header ocupa filas 1-5
   // Columnas: D=Entrada, E=Salida, F=Almuerzo(min), G=Horas Netas
-  // Fórmula: (Salida − Entrada) en horas − Almuerzo/60, nunca negativo
   const detalleFirstRow = 6;
-  detalleRows.forEach((row, i) => {
+  sortedEntries.forEach((entry, i) => {
     const r = detalleFirstRow + i;
-    const hasTimes = row[3] !== "—" && row[4] !== "—";
-    if (hasTimes) {
+    const startVal = timeToExcel(entry.start_time ? entry.start_time.slice(0, 5) : null);
+    const endVal = timeToExcel(entry.end_time ? entry.end_time.slice(0, 5) : null);
+
+    if (startVal !== null && endVal !== null) {
+      // Entrada y Salida como valores de hora REALES de Excel (editables sin romper nada)
+      wsDetalle[`D${r}`] = { t: "n", v: startVal, z: "hh:mm" };
+      wsDetalle[`E${r}`] = { t: "n", v: endVal, z: "hh:mm" };
+      // Horas Netas = (Salida − Entrada) × 24 − Almuerzo/60, nunca negativo
       wsDetalle[`G${r}`] = {
         t: "n",
-        f: `MAX(0,ROUND((TIMEVALUE(E${r})-TIMEVALUE(D${r}))*24-F${r}/60,2))`,
+        f: `MAX(0,ROUND((E${r}-D${r})*24-F${r}/60,2))`,
         z: "0.00",
       };
     }
     // Si no hay entrada/salida (registros viejos de PM con solo total),
-    // se queda el valor estático que ya está en la celda.
+    // se quedan el "—" y el valor estático de horas.
   });
 
   // Column widths for Detalle
