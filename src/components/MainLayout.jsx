@@ -2,6 +2,7 @@ import { useState } from 'react'
 import HomeScreen from './HomeScreen'
 import MyAccountScreen from './MyAccountScreen'
 import AdminScreen from './AdminScreen'
+import EvaluationsScreen from './EvaluationsScreen'
 
 const ROLES = {
   approver: { home: 'Aprobaciones', icon: '✓' },
@@ -14,9 +15,17 @@ export default function MainLayout({ user, onChangePin, onLogout }) {
 
   // Determinar qué tabs mostrar según rol
   const tabs = [
-    { id: 'home', label: ROLES[user.role]?.home || 'Inicio', icon: ROLES[user.role]?.icon || '🏠' },
-    { id: 'account', label: 'Mi Cuenta', icon: '👤' }
+    { id: 'home', label: ROLES[user.role]?.home || 'Inicio', icon: ROLES[user.role]?.icon || '🏠' }
   ]
+
+  // PMs llenan las evaluaciones de cierre; los approvers las aprueban.
+  // Los supervisores no participan en este flujo.
+  const canAccessEvaluations = user.role === 'pm' || user.role === 'approver'
+  if (canAccessEvaluations) {
+    tabs.push({ id: 'evals', label: 'Evaluaciones', icon: '📋' })
+  }
+
+  tabs.push({ id: 'account', label: 'Mi Cuenta', icon: '👤' })
 
   // Solo approvers con flag admin tienen acceso a Admin
   const canAccessAdmin = user.role === 'approver' && user.is_admin
@@ -40,6 +49,7 @@ export default function MainLayout({ user, onChangePin, onLogout }) {
       {/* Contenido principal según tab */}
       <div style={styles.content}>
         {activeTab === 'home' && <HomeScreen user={user} />}
+        {activeTab === 'evals' && canAccessEvaluations && <EvaluationsScreen user={user} />}
         {activeTab === 'account' && (
           <MyAccountScreen
             user={user}

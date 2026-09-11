@@ -4,6 +4,7 @@ import BrigadesView from "./BrigadesView";
 import ProjectsView from "./ProjectsView";
 import ReportsView from "./ReportsView";
 import ResetPinView from "./ResetPinView";
+import CriteriaView from "./CriteriaView";
 
 const ROLES = ["approver", "pm", "supervisor", "employee"];
 
@@ -233,6 +234,7 @@ export default function AdminScreen({ user }) {
   if (activeSection === "proyectos") return <ProjectsView onBack={() => setActiveSection(null)} user={user} />;
   if (activeSection === "reportes") return <ReportsView onBack={() => setActiveSection(null)} />;
   if (activeSection === "reset") return <ResetPinView onBack={() => setActiveSection(null)} />;
+  if (activeSection === "criterios") return <CriteriaView onBack={() => setActiveSection(null)} />;
 
   const adminTools = [
     { key: "empleados", title: "Empleados", desc: "Crear, editar y desactivar empleados", icon: "👥", color: "#2563eb", bg: "#dbeafe" },
@@ -240,6 +242,7 @@ export default function AdminScreen({ user }) {
     { key: "proyectos", title: "Proyectos", desc: "Catálogo de proyectos activos", icon: "📋", color: "#16a34a", bg: "#dcfce7" },
     { key: "reset", title: "Reset de PIN", desc: "Restablecer PIN de empleados", icon: "🔑", color: "#dc2626", bg: "#fee2e2" },
     { key: "reportes", title: "Reportes", desc: "Dashboard de horas y OT", icon: "📊", color: "#7c3aed", bg: "#ede9fe" },
+    { key: "criterios", title: "Criterios de evaluación", desc: "Editar los criterios de cierre de proyecto", icon: "✅", color: "#0891b2", bg: "#cffafe" },
   ];
 
   return (
